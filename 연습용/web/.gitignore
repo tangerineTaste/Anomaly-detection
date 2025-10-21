@@ -1,0 +1,6 @@
+# Ignore Visual Studio Code directory
+.vscode/
+.DS_Store
+*.pt
+*.h5
+*.mp4
