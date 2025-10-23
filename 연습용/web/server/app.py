@@ -1,6 +1,10 @@
 import json
 import time
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template
+from flask_socketio import SocketIO, emit
+import base64
+import cv2
+import numpy as np
 from flask_cors import CORS
 import logging
 import requests
@@ -21,8 +25,8 @@ app = Flask(__name__)
 
 # Loading configuration from BaseConfig class in the config module
 app.config.from_object('config.BaseConfig')
-
-
+app.config['SECRET_KEY'] = 'key'
+socketio = SocketIO(app, cors_allowed_origins="*") 
 
 # Initializing the database with the app instance
 db.init_app(app)
@@ -231,7 +235,30 @@ def after_request(response):
 
     return response
 
-
+# 소켓 코드 추가
+@socketio.on('connect', namespace='/ws/video_feed' )
+def test_connect():
+    print('Client connected')
+    
+@socketio.on('disconnect', namespace='/ws/video_feed')
+def test_disconnect():
+    print('Client disconnected')
+    
+@socketio.on('message', namespace='/ws/video_feed')
+def handle_message(data):
+    if data.startswith('data:image/jpeg;base64,'):
+        base64_image = data.split(',')[1]
+        try:
+            image_bytes = base64.b64decode(base64_image)
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            print('프레임 수신 및 처리 완료')
+        
+        except Exception as e:
+            print(f'이미지 처리 오류: {e}')
+    else:
+        print('알 수 없는 메시지 형식:', data[:50])
+        
 with app.app_context():
     # Initialization code that requires app context
    initialize_database()
@@ -240,4 +267,5 @@ with app.app_context():
 
 # This part runs the Flask app if this script is being executed directly
 if __name__ == '__main__':
+    socketio.run(app,host='127.0.0.1', port=5000, debug=True)
     app.run()

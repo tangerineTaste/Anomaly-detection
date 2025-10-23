@@ -272,11 +272,16 @@ const Dashboard = () => {
                       justifyContent="center"
                     >
                       {/*Insert the video / RTSP FEED HERE */}
-                      <img
-                        src={"../../assets/vid-evidence.jpg"}
-                        alt="sample"
-                        style={{ maxWidth: "100%", height: "auto" }} // Controlling image dimensions
-                      />
+                      <video
+                        src={"../../assets/C_3_10_1_BU_DYA_08-04_11-16-33_CC_RGB_DF2_M2.mp4"} // 여기에 비디오 파일 경로를 넣어주세요 (예: .mp4, .webm)
+                        controls // 비디오 제어기(재생, 정지, 볼륨 등) 표시
+                        autoPlay // 자동 재생 (대부분의 브라우저에서는 'muted' 속성도 함께 필요해요)
+                        muted // 음소거 (자동 재생을 위해 권장)
+                        loop // 반복 재생 (필요하다면)
+                        style={{ maxWidth: "100%", height: "auto" }} // 기존 이미지와 동일한 스타일 적용
+                      >
+                        영상을 재생할 수 없습니다. 
+                      </video>
                     </Box>
                   </Grid>
                   {/*GRID item 2.2 */}
@@ -289,11 +294,16 @@ const Dashboard = () => {
                       justifyContent="center"
                     >
                       {/*Insert the video / RTSP FEED HERE */}
-                      <img
-                        src={"../../assets/vid-evidence.jpg"}
-                        alt="sample"
-                        style={{ maxWidth: "100%", height: "auto" }} // Controlling image dimensions
-                      />
+                      <video
+                        src={"../../assets/C_3_10_1_BU_DYA_08-04_11-16-34_CB_RGB_DF2_M2.mp4"} // 여기에 비디오 파일 경로를 넣어주세요 (예: .mp4, .webm)
+                        controls // 비디오 제어기(재생, 정지, 볼륨 등) 표시
+                        autoPlay // 자동 재생 (대부분의 브라우저에서는 'muted' 속성도 함께 필요해요)
+                        muted // 음소거 (자동 재생을 위해 권장)
+                        loop // 반복 재생 (필요하다면)
+                        style={{ maxWidth: "100%", height: "auto" }} // 기존 이미지와 동일한 스타일 적용
+                      >
+                        영상을 재생할 수 없습니다. 
+                      </video>
                     </Box>
                   </Grid>
                   {/*GRID item 2.3 */}
