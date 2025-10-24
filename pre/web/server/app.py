@@ -235,10 +235,21 @@ def after_request(response):
 
     return response
 
-# 소켓 코드 추가
+from collections import deque
+from smoking_model import load_smoking_model, process_frame_for_smoking
+import mediapipe as mp
+
+# --- 모델 및 관련 변수 초기화 ---
+smoking_model, smoking_pose = load_smoking_model()
+sequence_data = deque(maxlen=30) # WINDOW_SIZE
+mp_drawing = mp.solutions.drawing_utils
+mp_pose = mp.solutions.pose
+
 @socketio.on('connect', namespace='/ws/video_feed' )
 def test_connect():
     print('Client connected')
+    # 참고: 다중 사용자를 지원하려면 세션별로 sequence_data를 관리해야 합니다.
+    # 예: session['sequence_data'] = deque(maxlen=30)
     
 @socketio.on('disconnect', namespace='/ws/video_feed')
 def test_disconnect():
@@ -246,16 +257,47 @@ def test_disconnect():
     
 @socketio.on('message', namespace='/ws/video_feed')
 def handle_message(data):
+    global smoking_model, smoking_pose # Moved global declaration here
     if data.startswith('data:image/jpeg;base64,'):
         base64_image = data.split(',')[1]
         try:
             image_bytes = base64.b64decode(base64_image)
             nparr = np.frombuffer(image_bytes, np.uint8)
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            print('프레임 수신 및 처리 완료')
-        
+
+            # --- 흡연 탐지 모델로 프레임 처리 ---
+            try:
+                prediction, processed_frame, landmarks = process_frame_for_smoking(
+                    frame, sequence_data, smoking_model, smoking_pose
+                )
+
+                # --- 결과 프레임에 스켈레톤 그리기 ---
+                if landmarks.pose_landmarks:
+                    mp_drawing.draw_landmarks(
+                        processed_frame, landmarks.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                        landmark_drawing_spec=mp_drawing.DrawingSpec(color=(245,117,66), thickness=2, circle_radius=2),
+                        connection_drawing_spec=mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2)
+                    )
+                
+                # --- 예측 결과를 프레임에 텍스트로 추가 ---
+                cv2.putText(processed_frame, prediction, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
+
+                # --- 프레임을 다시 base64로 인코딩하여 클라이언트에 전송 ---
+                _, buffer = cv2.imencode('.jpg', processed_frame)
+                encoded_image = base64.b64encode(buffer).decode('utf-8')
+                
+                # 예측 결과와 처리된 이미지를 클라이언트에 전송
+                emit('response', {'image': 'data:image/jpeg;base64,' + encoded_image, 'prediction': prediction})
+
+            except Exception as mediapipe_error:
+                # global smoking_model, smoking_pose # Removed from here
+                print(f"MediaPipe 처리 중 오류 발생: {mediapipe_error}. 모델을 다시 로드합니다.")
+                smoking_model, smoking_pose = load_smoking_model()
+                # Optionally, send a message to the client that there was an error or to re-send
+                emit('error', {'message': 'MediaPipe processing error, re-initializing model.'})
+
         except Exception as e:
-            print(f'이미지 처리 오류: {e}')
+            print(f'이미지 디코딩 또는 기타 오류: {e}')
     else:
         print('알 수 없는 메시지 형식:', data[:50])
         
