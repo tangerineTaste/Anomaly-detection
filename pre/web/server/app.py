@@ -74,67 +74,7 @@ initialized = False
 # def startup():
 #     construct_and_send_rtsp_urls()
 
-currently_processing = set()
 
-
-def build_rtsp_url(camera):
-    rtsp_base = f"rtsp://{camera.IPAddress}"
-    rtsp_port = f":{camera.Port}" if camera.Port else ""
-    rtsp_option = f"/{camera.Option}" if camera.Option else ""
-    return rtsp_base + rtsp_port + rtsp_option
-
-def call_process_weapon(rtsp_url):
-    # The process_weapon endpoint expects a POST request with the RTSP URL
-    endpoint = 'http://localhost:5000/user/api/process_weapon'  # Update with your actual endpoint
-    requests.post(endpoint, json={'rtsp_url': rtsp_url})
-
-def call_process_fire(rtsp_url):
-    # The process_fire endpoint expects a POST request with the RTSP URL
-    endpoint = 'http://localhost:5000/user/api/process_fire'  # Update with your actual endpoint
-    requests.post(endpoint, json={'rtsp_url': rtsp_url})
-
-def initializeProcessing():
-    with app.app_context():
-        while True:
-            cameras = CameraDetails.query.all()
-            CameraDetails.query.session.close()
-            
-            threads = []
-            for camera in cameras:
-                # Check if this camera is already being processed
-                if camera.id in currently_processing:
-                    continue  # Skip this camera as it's already being processed
-
-                # Add the camera ID to the set
-                currently_processing.add(camera.id)
-
-                #Build RTSP to stream
-                rtsp_url = build_rtsp_url(camera)
-
-                print(f"Analyzing camera {camera.id}: {rtsp_url}")
-
-                # Create a thread for processing fire for this camera
-                fire_thread = Thread(target=call_process_fire, args=(rtsp_url,))
-                fire_thread.start()
-                threads.append(fire_thread)
-
-
-                # Create a separate thread for processing weapon for this camera
-                weapon_thread = Thread(target=call_process_weapon, args=(rtsp_url,))
-                weapon_thread.start()
-                threads.append(weapon_thread)
-
-
-        #time.sleep(20)
-
-
-# Run initializeProcessing in a background thread
-#@app.before_request
-def start_initialize_processing():
-    print("> Success: Started Image Processing from all cameras")
-    processing_thread = Thread(target=initializeProcessing)
-    processing_thread.daemon = True  # Daemonize thread
-    processing_thread.start()
 
 
 @jwt.expired_token_loader
@@ -244,6 +184,7 @@ smoking_model, smoking_pose = load_smoking_model()
 sequence_data = deque(maxlen=30) # WINDOW_SIZE
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
+is_processing = False # 프레임 처리 중인지 확인하는 플래그
 
 @socketio.on('connect', namespace='/ws/video_feed' )
 def test_connect():
@@ -257,57 +198,65 @@ def test_disconnect():
     
 @socketio.on('message', namespace='/ws/video_feed')
 def handle_message(data):
-    global smoking_model, smoking_pose # Moved global declaration here
-    if data.startswith('data:image/jpeg;base64,'):
-        base64_image = data.split(',')[1]
-        try:
-            image_bytes = base64.b64decode(base64_image)
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    global is_processing
+    if is_processing:
+        return  # 이미 처리 중인 프레임이 있으면 현재 프레임은 건너뜁니다.
 
-            # --- 흡연 탐지 모델로 프레임 처리 ---
+    is_processing = True
+    try:
+        global smoking_model, smoking_pose # Moved global declaration here
+        if data.startswith('data:image/jpeg;base64,'):
+            base64_image = data.split(',')[1]
             try:
-                prediction, processed_frame, landmarks = process_frame_for_smoking(
-                    frame, sequence_data, smoking_model, smoking_pose
-                )
+                image_bytes = base64.b64decode(base64_image)
+                nparr = np.frombuffer(image_bytes, np.uint8)
+                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-                # --- 결과 프레임에 스켈레톤 그리기 ---
-                if landmarks.pose_landmarks:
-                    mp_drawing.draw_landmarks(
-                        processed_frame, landmarks.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                        landmark_drawing_spec=mp_drawing.DrawingSpec(color=(245,117,66), thickness=2, circle_radius=2),
-                        connection_drawing_spec=mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2)
+                # --- 흡연 탐지 모델로 프레임 처리 ---
+                try:
+                    prediction, processed_frame, landmarks = process_frame_for_smoking(
+                        frame, sequence_data, smoking_model, smoking_pose
                     )
-                
-                # --- 예측 결과를 프레임에 텍스트로 추가 ---
-                cv2.putText(processed_frame, prediction, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
 
-                # --- 프레임을 다시 base64로 인코딩하여 클라이언트에 전송 ---
-                _, buffer = cv2.imencode('.jpg', processed_frame)
-                encoded_image = base64.b64encode(buffer).decode('utf-8')
-                
-                # 예측 결과와 처리된 이미지를 클라이언트에 전송
-                emit('response', {'image': 'data:image/jpeg;base64,' + encoded_image, 'prediction': prediction})
+                    # --- 결과 프레임에 스켈레톤 그리기 ---
+                    if landmarks.pose_landmarks:
+                        mp_drawing.draw_landmarks(
+                            processed_frame, landmarks.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                            landmark_drawing_spec=mp_drawing.DrawingSpec(color=(245,117,66), thickness=2, circle_radius=2),
+                            connection_drawing_spec=mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2)
+                        )
+                    
+                    # --- 예측 결과를 프레임에 텍스트로 추가 ---
+                    cv2.putText(processed_frame, prediction, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
 
-            except Exception as mediapipe_error:
-                # global smoking_model, smoking_pose # Removed from here
-                print(f"MediaPipe 처리 중 오류 발생: {mediapipe_error}. 모델을 다시 로드합니다.")
-                smoking_model, smoking_pose = load_smoking_model()
-                # Optionally, send a message to the client that there was an error or to re-send
-                emit('error', {'message': 'MediaPipe processing error, re-initializing model.'})
+                    # --- 프레임을 다시 base64로 인코딩하여 클라이언트에 전송 ---
+                    _, buffer = cv2.imencode('.jpg', processed_frame)
+                    encoded_image = base64.b64encode(buffer).decode('utf-8')
+                    
+                    # 예측 결과와 처리된 이미지를 클라이언트에 전송
+                    emit('response', {'image': 'data:image/jpeg;base64,' + encoded_image, 'prediction': prediction})
 
-        except Exception as e:
-            print(f'이미지 디코딩 또는 기타 오류: {e}')
-    else:
-        print('알 수 없는 메시지 형식:', data[:50])
+                except Exception as mediapipe_error:
+                    # global smoking_model, smoking_pose # Removed from here
+                    print(f"MediaPipe 처리 중 오류 발생: {mediapipe_error}. 모델을 다시 로드합니다.")
+                    smoking_model, smoking_pose = load_smoking_model()
+                    # Optionally, send a message to the client that there was an error or to re-send
+                    emit('error', {'message': 'MediaPipe processing error, re-initializing model.'})
+
+            except Exception as e:
+                print(f'이미지 디코딩 또는 기타 오류: {e}')
+        else:
+            print('알 수 없는 메시지 형식:', data[:50])
+    finally:
+        is_processing = False # 처리가 끝나면 플래그를 리셋합니다.
+
         
 with app.app_context():
     # Initialization code that requires app context
    initialize_database()
    create_roles()
-   start_initialize_processing()
+   # start_initialize_processing()
 
 # This part runs the Flask app if this script is being executed directly
 if __name__ == '__main__':
-    socketio.run(app,host='127.0.0.1', port=5000, debug=True)
-    app.run()
+    socketio.run(app, host='127.0.0.1', port=5000, async_mode='eventlet')

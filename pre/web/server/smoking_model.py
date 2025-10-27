@@ -16,7 +16,7 @@ def load_smoking_model():
     model = tf.keras.models.load_model(model_path)
     
     mp_pose = mp.solutions.pose
-    pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    pose = mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.5, min_tracking_confidence=0.5)
     
     return model, pose
 
