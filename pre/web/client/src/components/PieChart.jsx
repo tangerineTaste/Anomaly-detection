@@ -2,29 +2,32 @@ import React from "react";
 import { ResponsivePie } from "@nivo/pie";
 import { tokens } from "../theme";
 
-const CenterText = ({ dataWithArc, centerX, centerY, data }) => (
-  <text
-    x={centerX}
-    y={centerY}
-    textAnchor="middle"
-    dominantBaseline="central"
-    fill="black"
-  >
-    <tspan fontSize={22} fontWeight="bold" x={centerX} dy="-0.5em">
-      {dataWithArc.reduce((sum, data) => sum + data.value, 0)}
-    </tspan>
-    <tspan fontSize={14} fontWeight="bold" x={centerX} dy="1.5em">
-      Dispatches
-    </tspan>
-  </text>
-);
+const CenterText = ({ dataWithArc, centerX, centerY, data }) => {
+  const total = dataWithArc.reduce((sum, data) => sum + data.value, 0);
+
+  return (
+    <text
+      x={centerX}
+      y={centerY}
+      textAnchor="middle"
+      dominantBaseline="central"
+    >
+      <tspan fontSize={36} fontWeight="bold" x={centerX} dy="-0.2em" fill="#2563EB">
+        {total}%
+      </tspan>
+      <tspan fontSize={13} x={centerX} dy="1.8em" fill="#94A3B8">
+        Total Sales
+      </tspan>
+    </text>
+  );
+};
 
 const PieChart = ({ data, isDashboard = false }) => {
   const colors = tokens;
   return (
     <ResponsivePie
       data={data}
-      layers={["arcs", "legends", CenterText]}
+      layers={["arcs", CenterText]}
       colors={{ datum: "data.color" }}
       theme={{
         axis: {
@@ -54,11 +57,12 @@ const PieChart = ({ data, isDashboard = false }) => {
           },
         },
       }}
-      margin={{ top: 30, right: 80, bottom: 50, left: 80 }}
-      innerRadius={0.9}
-      padAngle={0.7}
+      margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+      innerRadius={0.6}
+      padAngle={2}
       cornerRadius={3}
       activeOuterRadiusOffset={8}
+      borderWidth={0}
       borderColor={{
         from: "color",
         modifiers: [["darker", 0.2]],

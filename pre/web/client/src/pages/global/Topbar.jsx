@@ -13,9 +13,9 @@ import {
   FormControl,
   InputLabel,
   Grid,
+  Badge,
 } from "@mui/material";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
-
 import PersonIcon from "@mui/icons-material/Person";
 import ExitToAppOutlinedIcon from "@mui/icons-material/ExitToAppOutlined";
 import FireIcon from "@mui/icons-material/LocalFireDepartmentOutlined";
@@ -25,7 +25,6 @@ import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { LOGOUT } from "./../../store/actions";
 import { useDispatch } from "react-redux";
-
 import axiosInstance from "../../api/axios";
 
 const Topbar = () => {
@@ -70,7 +69,11 @@ const Topbar = () => {
   ];
 
   const handleClick = (event) => {
-    setAnchorEl(event.currentTarget);
+    if (anchorEl) {
+      setAnchorEl(null);
+    } else {
+      setAnchorEl(event.currentTarget);
+    }
   };
 
   const handleClose = () => {
@@ -78,69 +81,26 @@ const Topbar = () => {
   };
 
   const handleAlertClick = (event) => {
-    setAlertAnchorEl(event.currentTarget);
+    if (alertAnchorEl) {
+      setAlertAnchorEl(null);
+    } else {
+      setAlertAnchorEl(event.currentTarget);
+    }
   };
 
   const handleAlertClose = () => {
     setAlertAnchorEl(null);
   };
 
-  // const handleLogout = () => {
-  //   handleClose();
-  //   // Add your logout logic here
-  // };
-
   const handleFilterChange = (event) => {
     setSelectedFilter(event.target.value);
   };
-  /*
-  const handleMarkAllAsRead = () => {
-    const updatedNotifications = notifications.map((notification) => ({
-      ...notification,
-      unread: false,
-    }));
-    // Update the state with the new notifications array
-    // You can use a state management library like Redux, MobX, or React Context for this.
-  };
-*/
+
   const filteredNotifications = notifications.filter((notification) => {
     if (selectedFilter === "all") return true;
     return notification.type === selectedFilter;
   });
 
-  // const handleLogout = () => {
-  //   // Assuming Refresh_token is accessible in this scope
-
-  //   axiosInstance
-  //     .post("auth/api/users/logout")
-  //     .then(function (logoutResponse) {
-  //       if (logoutResponse.data.success) {
-  //         // Logout was successful, proceed to revoke_refresh
-
-  //         // Send a request to revoke_refresh
-  //         return axios.post(
-  //           config.API_SERVER + "auth/api/users/revoke_refresh",
-  //           {},
-  //           {
-  //             headers: { Authorization: `Bearer ${refresh_token}` },
-  //           }
-  //         );
-  //       } else {
-  //         // Logout was unsuccessful
-  //         console.log("Logout unsuccessful: ", logoutResponse.data.msg);
-  //         return;
-  //       }
-  //     })
-  //     .then(function (revokeResponse) {
-  //       // Handle the response after revoking the refresh token
-  //       console.log("Refresh token revoked: ", revokeResponse.data);
-  //       dispatcher({ type: LOGOUT });
-  //     })
-  //     .catch(function (error) {
-  //       // Handle errors for both the logout and revoke_refresh requests
-  //       console.log("Error: ", error);
-  //     });
-  // };
   const handleLogout = () => {
     axiosInstance
       .post("auth/api/users/logout", refresh_token)
@@ -156,40 +116,185 @@ const Topbar = () => {
       });
   };
 
+  const unreadCount = notifications.filter(n => n.unread).length;
+
   return (
     <Box
-      display="flex"
-      justifyContent="space-between"
-      p={2}
-      borderBottom="2px solid #DCDDDD !important"
-      alignItems="center"
+      sx={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10001,
+        backgroundColor: "#ffffff",
+        // boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        borderBottom: "1px solid #f0f0f0",
+      }}
     >
-      <Box display="flex" alignItems="center" p={0.2}>
-        <Typography
-          variant="h5"
-          color={colors.blueAccents[500]}
-          fontWeight="bold"
-        >
-          {welcomeText}
-        </Typography>
-      </Box>
-      <Box display="flex" alignItems="center">
-        <Box borderRight="1px solid #DCDDDD !important" p="0px 8px 0px 8px">
-          <IconButton onClick={handleAlertClick}>
-            <NotificationsOutlinedIcon />
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{
+          padding: "12px 24px",
+        }}
+      >
+        {/* Left side - Logo */}
+        <Box display="flex" alignItems="center" gap={2}>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: "12px",
+              background: "#f56214",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Typography
+              sx={{
+                color: "#ffffff",
+                fontWeight: "bold",
+                fontSize: "22px",
+              }}
+            >
+              S
+            </Typography>
+          </Box>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: "bold",
+              color: colors.blackAccents[500],
+              fontSize: "22px",
+            }}
+          >
+            SIGNAL
+          </Typography>
+        </Box>
+
+        {/* Right side - Icons and Profile */}
+        <Box display="flex" alignItems="center" gap={2}>
+          {/* Notification Bell */}
+          <IconButton
+            onClick={handleAlertClick}
+            sx={{
+              padding: "8px",
+              color: "#666",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                color: "#333",
+                backgroundColor: "transparent",
+              },
+            }}
+          >
+            <Badge
+              badgeContent={unreadCount}
+              color="error"
+              sx={{
+                "& .MuiBadge-badge": {
+                  fontSize: "9px",
+                  height: "16px",
+                  minWidth: "16px",
+                  padding: "0 4px",
+                }
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M20 17H22V19H2V17H4V10C4 5.58172 7.58172 2 12 2C16.4183 2 20 5.58172 20 10V17ZM18 17V10C18 6.68629 15.3137 4 12 4C8.68629 4 6 6.68629 6 10V17H18ZM9 21H15V23H9V21Z"></path>
+              </svg>
+            </Badge>
           </IconButton>
+
+          {/* Divider Line */}
+          <Box
+            sx={{
+              width: "1px",
+              height: "24px",
+              backgroundColor: "#e0e0e0",
+              margin: "0 4px",
+            }}
+          />
+
+          {/* Profile Section */}
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={1.5}
+            sx={{
+              cursor: "pointer",
+              padding: "4px 8px",
+              borderRadius: "8px",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                // backgroundColor: "#f5f5f5",
+              },
+            }}
+            onClick={handleClick}
+          >
+            {/* Text Info */}
+            <Box sx={{ textAlign: "right" }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontFamily: "'NanumSquare', sans-serif",
+                  fontWeight: "700",
+                  color: "#2c2c2c",
+                  fontSize: "14px",
+                  lineHeight: "1.2",
+                  marginBottom: "-4px",
+                }}
+              >
+                {firstName}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  fontFamily: "'NanumSquare', sans-serif",
+                  fontWeight: "400",
+                  color: "#999",
+                  fontSize: "12px",
+                  lineHeight: "1.2",
+                }}
+              >
+                {user.email || "user@example.com"}
+              </Typography>
+            </Box>
+
+            {/* Profile Icon */}
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                backgroundColor: "#f0f0f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#666",
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M4 22C4 17.5817 7.58172 14 12 14C16.4183 14 20 17.5817 20 22H18C18 18.6863 15.3137 16 12 16C8.68629 16 6 18.6863 6 22H4ZM12 13C8.685 13 6 10.315 6 7C6 3.685 8.685 1 12 1C15.315 1 18 3.685 18 7C18 10.315 15.315 13 12 13ZM12 11C14.21 11 16 9.21 16 7C16 4.79 14.21 3 12 3C9.79 3 8 4.79 8 7C8 9.21 9.79 11 12 11Z"></path>
+              </svg>
+            </Box>
+          </Box>
+
+          {/* Notification Menu */}
           <Menu
             anchorEl={alertAnchorEl}
             open={Boolean(alertAnchorEl)}
             onClose={handleAlertClose}
             PaperProps={{
               style: {
-                backgroundColor: theme.palette.background.paper,
-                boxShadow: theme.shadows[1],
-                borderRadius: "8px",
-                width: "300px",
-                maxHeight: "400px",
+                backgroundColor: "#ffffff",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                borderRadius: "12px",
+                width: "320px",
+                maxHeight: "450px",
                 overflowY: "auto",
+                marginTop: "8px",
               },
             }}
           >
@@ -197,113 +302,184 @@ const Topbar = () => {
               container
               alignItems="center"
               justifyContent="space-between"
-              p={2}
+              sx={{ padding: "16px 20px", borderBottom: "1px solid #f0f0f0" }}
             >
               <Grid item>
-                <Typography variant="subtitle1" fontWeight="bold" color="black">
+                <Typography
+                  variant="h6"
+                  fontWeight="bold"
+                  color={colors.blackAccents[500]}
+                  sx={{ fontFamily: "'NanumSquare', sans-serif" }}
+                >
                   Notifications
                 </Typography>
               </Grid>
               <Grid item>
                 <Button
-                  variant="outlined"
+                  variant="text"
                   color="primary"
                   size="small"
-                  //  onClick={handleMarkAllAsRead}
+                  sx={{
+                    textTransform: "none",
+                    fontSize: "12px",
+                    fontFamily: "'NanumSquare', sans-serif"
+                  }}
                 >
                   Mark All as Read
                 </Button>
               </Grid>
             </Grid>
             <FormControl fullWidth variant="outlined" sx={{ p: 2 }}>
-              <InputLabel>Filter</InputLabel>
+              <InputLabel sx={{ fontFamily: "'NanumSquare', sans-serif" }}>Filter</InputLabel>
               <Select
                 value={selectedFilter}
                 onChange={handleFilterChange}
                 label="Filter"
+                sx={{
+                  borderRadius: "8px",
+                  fontFamily: "'NanumSquare', sans-serif"
+                }}
               >
-                <MenuItem value="all">All Notifications</MenuItem>
-                <MenuItem value="unread">Unread</MenuItem>
-                <MenuItem value="fire">Fire</MenuItem>
-                <MenuItem value="smoke">Smoke</MenuItem>
-                <MenuItem value="gun">Gun</MenuItem>
-                <MenuItem value="weapon">Weapon</MenuItem>
+                <MenuItem value="all" sx={{ fontFamily: "'NanumSquare', sans-serif" }}>All Notifications</MenuItem>
+                <MenuItem value="unread" sx={{ fontFamily: "'NanumSquare', sans-serif" }}>Unread</MenuItem>
+                <MenuItem value="fire" sx={{ fontFamily: "'NanumSquare', sans-serif" }}>Fire</MenuItem>
+                <MenuItem value="smoke" sx={{ fontFamily: "'NanumSquare', sans-serif" }}>Smoke</MenuItem>
+                <MenuItem value="gun" sx={{ fontFamily: "'NanumSquare', sans-serif" }}>Gun</MenuItem>
+                <MenuItem value="weapon" sx={{ fontFamily: "'NanumSquare', sans-serif" }}>Weapon</MenuItem>
               </Select>
             </FormControl>
             {filteredNotifications.map((notification, index) => (
-              <MenuItem key={index} onClick={handleAlertClose}>
-                {notification.type === "fire" && <FireIcon />}
-                {notification.type === "smoke" && <SmokeIcon />}
-                {notification.type === "gun" && <GunAlertOutlinedIcon />}
-                <div>
-                  <Typography variant="subtitle1">
-                    {notification.type.charAt(0).toUpperCase() +
-                      notification.type.slice(1)}{" "}
-                    Alert
-                  </Typography>
-                  <Typography variant="body2">
-                    {notification.message}
-                  </Typography>
-                  {notification.unread ? (
-                    <span style={{ color: "red" }}>Unread</span>
-                  ) : null}
-                </div>
+              <MenuItem
+                key={index}
+                onClick={handleAlertClose}
+                sx={{
+                  padding: "12px 20px",
+                  borderBottom: "1px solid #f5f5f5",
+                  "&:hover": {
+                    backgroundColor: "#f9f9f9",
+                  },
+                }}
+              >
+                <Box display="flex" alignItems="center" gap={2} width="100%">
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "10px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor:
+                        notification.type === "fire"
+                          ? "#ffebee"
+                          : notification.type === "smoke"
+                          ? "#e3f2fd"
+                          : "#fff3e0",
+                    }}
+                  >
+                    {notification.type === "fire" && (
+                      <FireIcon sx={{ color: "#f44336" }} />
+                    )}
+                    {notification.type === "smoke" && (
+                      <SmokeIcon sx={{ color: "#2196f3" }} />
+                    )}
+                    {notification.type === "gun" && (
+                      <GunAlertOutlinedIcon sx={{ color: "#ff9800" }} />
+                    )}
+                  </Box>
+                  <Box flex={1}>
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight="600"
+                      sx={{ fontFamily: "'NanumSquare', sans-serif" }}
+                    >
+                      {notification.type.charAt(0).toUpperCase() +
+                        notification.type.slice(1)}{" "}
+                      Alert
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      fontSize="12px"
+                      sx={{ fontFamily: "'NanumSquare', sans-serif" }}
+                    >
+                      {notification.message}
+                    </Typography>
+                  </Box>
+                  {notification.unread && (
+                    <Box
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        backgroundColor: colors.blueAccents[500],
+                      }}
+                    />
+                  )}
+                </Box>
               </MenuItem>
             ))}
-            <MenuItem onClick={handleAlertClose}>
-              <div style={{ textAlign: "center", width: "100%" }}>
-                <Button variant="outlined" color="primary">
-                  View All
-                </Button>
-              </div>
-            </MenuItem>
+            <Box sx={{ padding: "12px 20px", textAlign: "center" }}>
+              <Button
+                variant="text"
+                color="primary"
+                fullWidth
+                sx={{
+                  textTransform: "none",
+                  borderRadius: "8px",
+                  padding: "8px",
+                  fontFamily: "'NanumSquare', sans-serif"
+                }}
+              >
+                View All Notifications
+              </Button>
+            </Box>
           </Menu>
-        </Box>
-        <Box
-          borderLeft="1px solid #DCDDDD !important"
-          p="0px 8px 0px 8px"
-          display="flex"
-          alignItems="center"
-        >
-          <IconButton
-            sx={{
-              border: "2px solid #DCDDDD !important",
-              backgroundColor: colors.orangeAccents[300],
-            }}
-            onClick={handleClick}
-          >
-            <PersonIcon />
-          </IconButton>
+
+          {/* Profile Menu */}
           <Menu
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={handleClose}
             PaperProps={{
               style: {
-                backgroundColor: theme.palette.background.paper,
-                boxShadow: theme.shadows[1],
-                borderRadius: "8px",
+                backgroundColor: "#ffffff",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                borderRadius: "12px",
+                marginTop: "8px",
+                minWidth: "200px",
               },
             }}
           >
-            <MenuItem onClick={handleClose} component={Link} to="/myprofile">
-              <Avatar>
-                <PersonIcon />
-              </Avatar>
-              My Profile
+            <MenuItem
+              onClick={handleClose}
+              component={Link}
+              to="/myprofile"
+              sx={{
+                fontFamily: "'NanumSquare', sans-serif",
+                padding: "12px 20px",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
+                },
+              }}
+            >
+              <PersonIcon sx={{ mr: 2, color: colors.blueAccents[500] }} />
+              <Typography variant="body2" sx={{ fontFamily: "'NanumSquare', sans-serif" }}>My Profile</Typography>
             </MenuItem>
-            <MenuItem onClick={handleLogout}>
-              <Avatar>
-                <ExitToAppOutlinedIcon />
-              </Avatar>
-              Logout
+            <MenuItem
+              onClick={handleLogout}
+              sx={{
+                fontFamily: "'NanumSquare', sans-serif",
+                padding: "12px 20px",
+                "&:hover": {
+                  backgroundColor: "#ffebee",
+                },
+              }}
+            >
+              <ExitToAppOutlinedIcon sx={{ mr: 2, color: colors.orangeAccents[500] }} />
+              <Typography variant="body2" sx={{ fontFamily: "'NanumSquare', sans-serif" }}>Logout</Typography>
             </MenuItem>
           </Menu>
-          <Box ml={1}>
-            <Typography fontWeight="normal">
-              {username.replace(/['"]+/g, "")}
-            </Typography>
-          </Box>
         </Box>
       </Box>
     </Box>
