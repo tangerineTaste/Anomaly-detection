@@ -18,7 +18,7 @@ const Dashboard = () => {
   const colors = tokens;
 
   // apiService.js
-  const API_URL = "http://127.0.0.1:5000/user"; // Replace with your actual API URL
+  const API_URL = "http://192.168.94.49:5000/user"; // Replace with your actual API URL
 
   const fetchFireIncidentsCount = async () => {
     try {

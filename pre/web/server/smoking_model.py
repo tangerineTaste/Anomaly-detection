@@ -50,7 +50,6 @@ key_joint_names = [
 ]
 key_joint_map_mp_enums = [joint_map_mp.get(name) for name in key_joint_names if joint_map_mp.get(name) is not None]
 
-
 def process_frame_for_smoking(frame, sequence_data, model, pose):
     """
     단일 프레임을 받아 흡연 여부를 예측하고, 예측 결과와 스켈레톤이 그려진 프레임을 반환합니다.
@@ -127,11 +126,11 @@ def process_frame_for_smoking(frame, sequence_data, model, pose):
                 sequence_data.append(temp_coords_normalized)
 
     # --- 예측 수행 ---
-    if len(sequence_data) == WINDOW_SIZE:
+    if len(sequence_data) < WINDOW_SIZE:
+        prediction_text = "waiting"
+    else:
         input_data = np.expand_dims(np.array(sequence_data), axis=0)
         prediction = model.predict(input_data)[0][0]
         prediction_text = f"SMOKING ({prediction:.2f})" if prediction > 0.9 else f"NORMAL ({prediction:.2f})"
-    elif not key_joints_visible and results.pose_landmarks:
-        prediction_text = "Key Joints Hidden"
 
     return prediction_text, frame, results

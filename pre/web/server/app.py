@@ -226,9 +226,6 @@ def handle_message(data):
                             connection_drawing_spec=mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2)
                         )
                     
-                    # --- 예측 결과를 프레임에 텍스트로 추가 ---
-                    cv2.putText(processed_frame, prediction, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
-
                     # --- 프레임을 다시 base64로 인코딩하여 클라이언트에 전송 ---
                     _, buffer = cv2.imencode('.jpg', processed_frame)
                     encoded_image = base64.b64encode(buffer).decode('utf-8')
