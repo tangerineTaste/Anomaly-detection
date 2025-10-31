@@ -10,6 +10,7 @@ from models.userrole import UserRole
 from models.detections import Detections
 from models.videos import Videos
 from models.reports import Reports
+from models.user_video import UserVideo
 
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     "Dispatch_Active",
     "Detections",
     "Videos",
-    "Reports"
+    "Reports",
+    "UserVideo"
 ]

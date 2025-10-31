@@ -5,9 +5,10 @@ import cv2
 import requests
 import calendar
 import os
+from werkzeug.utils import secure_filename
 
 #Flask Imports
-from flask import Response, jsonify, send_file
+from flask import Response, jsonify, send_file, request, send_from_directory
 from flask_restx import Namespace, Resource, fields
 
 #JWT imports
@@ -18,7 +19,7 @@ import numpy as np
 from ultralytics import YOLO
 
 from sqlalchemy import or_
-from models import Users, CameraDetails, DispatchDetails, Dispatch_Active , Detections, Notifications, Incidents,Videos, Reports
+from models import Users, CameraDetails, DispatchDetails, Dispatch_Active , Detections, Notifications, Incidents,Videos, Reports, UserVideo
 from flask import request
 
 #extensions
@@ -728,6 +729,101 @@ class SystemDataFileResource(Resource):
            as_attachment=True,
            download_name=f"system_data_{report_id}.pdf"
         )
+
+# 사용자 비디오 API
+UPLOAD_FOLDER = r'C:\Detection\pre\web\server\uploads\videos'
+ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@rest_api.route('/videos', defaults={'video_id': None})
+@rest_api.route('/videos/<int:video_id>')
+class UserVideoResource(Resource):
+
+    @jwt_required() # 사용자 인증이 필요하다고 가정
+    def post(self):
+        try:
+            # POST 요청에 파일 부분이 있는지 확인
+            if 'file' not in request.files:
+                return {"success": False, "msg": "No file part in the request"}, 400
+            file = request.files['file']
+            # 사용자가 파일을 선택하지 않으면 브라우저는
+            # 파일 이름 없이 빈 파일을 제출합니다.
+            if file.filename == '':
+                return {"success": False, "msg": "No selected file"}, 400
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(UPLOAD_FOLDER, filename)
+                file.save(file_path)
+
+                video_name = request.form.get('video_name', filename) # 폼 데이터에서 비디오 이름을 가져오고, 기본값은 파일 이름
+
+                new_video = UserVideo(video_name=video_name, video_path=file_path)
+                new_video.save()
+
+                return {"success": True, "msg": "Video uploaded successfully", "video_id": new_video.id}, 201
+            else:
+                return {"success": False, "msg": "Allowed video types are mp4, avi, mov, mkv"}, 400
+        except Exception as e:
+            db.session.rollback()
+            return {"success": False, "msg": f"Error uploading video: {str(e)}"}, 500
+
+    @jwt_required() # 사용자 인증이 필요하다고 가정
+    def get(self, video_id=None):
+        try:
+            if video_id:
+                video = UserVideo.get_by_id(video_id)
+                if not video:
+                    return {"success": False, "msg": "Video not found"}, 404
+                
+                # 비디오 파일 스트리밍
+                return send_from_directory(UPLOAD_FOLDER, os.path.basename(video.video_path), as_attachment=False)
+            else:
+                # 모든 비디오 가져오기
+                videos = UserVideo.query.all()
+                return {"success": True, "videos": [v.to_dict() for v in videos]}, 200
+        except Exception as e:
+            return {"success": False, "msg": f"Error fetching video(s): {str(e)}"}, 500
+
+    @jwt_required() # 사용자 인증이 필요하다고 가정
+    def put(self, video_id):
+        try:
+            video = UserVideo.get_by_id(video_id)
+            if not video:
+                return {"success": False, "msg": "Video not found"}, 404
+
+            data = request.get_json()
+            new_video_name = data.get('video_name')
+
+            if new_video_name:
+                video.video_name = new_video_name
+                db.session.commit()
+                return {"success": True, "msg": "Video updated successfully", "video": video.to_dict()}, 200
+            else:
+                return {"success": False, "msg": "No update data provided"}, 400
+        except Exception as e:
+            db.session.rollback()
+            return {"success": False, "msg": f"Error updating video: {str(e)}"}, 500
+
+    @jwt_required() # 사용자 인증이 필요하다고 가정
+    def delete(self, video_id):
+        try:
+            video = UserVideo.get_by_id(video_id)
+            if not video:
+                return {"success": False, "msg": "Video not found"}, 404
+
+            # 파일 시스템에서 파일 삭제
+            if os.path.exists(video.video_path):
+                os.remove(video.video_path)
+            
+            db.session.delete(video)
+            db.session.commit()
+            return {"success": True, "msg": "Video deleted successfully"}, 200
+        except Exception as e:
+            db.session.rollback()
+            return {"success": False, "msg": f"Error deleting video: {str(e)}"}, 500
 
 # Setting API's #
 
