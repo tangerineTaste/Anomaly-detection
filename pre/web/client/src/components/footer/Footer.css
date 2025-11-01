@@ -1,0 +1,84 @@
+/* src/components/Footer.css */
+
+/* GmarketSansBold 폰트 */
+@font-face {
+  font-family: 'GmarketSansBold';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff2')
+    format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* 전체 영역 */
+.footer {
+  background-color: #0F0E0E;
+  color: #ccc;
+  width: 100%;
+  padding: 40px 0 60px 0;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+/* 내부 컨테이너 */
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 0px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+/* 왼쪽 정보 영역 */
+.footer-info {
+  max-width: 900px;
+}
+
+/* 링크 영역 */
+.footer-links {
+  margin-bottom: 10px;
+}
+
+.footer-links a {
+  color: #aaa; /* ✅ 기본 연회색 */
+  font-size: 15px;
+  text-decoration: none;
+  margin: 0 5px;
+  transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+  color: #f56214; /* ✅ hover 시 주황색 */
+  text-decoration: none;
+}
+
+.footer-links span {
+  color: #666;
+  margin: 0 5px;
+}
+
+/* 본문 텍스트 */
+.footer-text {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #ccc;
+  margin: 10px 0 0;
+}
+
+/* 저작권 */
+.footer-copy {
+  font-size: 13px;
+  color: #888;
+  margin-top: 30px;
+}
+
+/* 오른쪽 GitHub 아이콘 */
+.github-icon {
+  color: #aaa; /* ✅ 기본 연회색으로 통일 */
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.github-icon:hover {
+  color: #f56214; /* ✅ hover 시 주황색 */
+  transform: scale(1.08);
+}

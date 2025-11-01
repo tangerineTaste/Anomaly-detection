@@ -7,6 +7,7 @@ import AuthGuard from "../utils/route-guard/AuthGuard";
 import { MyProSidebarProvider } from "../pages/global/sidebar/sidebarContext";
 import Topbar from "../pages/global/Topbar";
 import RoleGuard from "../utils/route-guard/RolesGuard";
+import Main from "../pages/main";
 
 // dashboard routing
 const Dashboard = Loadable(lazy(() => import("../pages/dashboard")));
@@ -42,6 +43,9 @@ const MainRoutes = () => {
   return (
     <Switch location={location} key={location.pathname}>
       <Route path="/401" component={Page401} />
+      <Route path="/main">
+        <Main />
+      </Route>
       <Route
         path={[
           "/dashboard",
@@ -193,7 +197,7 @@ const MainRoutes = () => {
           </MyProSidebarProvider>
         </AuthGuard>
       </Route>
-      <Route path="*" component={Page404} />
+      <Route path="/dashboard/*" component={Page404} />
     </Switch>
   );
 };

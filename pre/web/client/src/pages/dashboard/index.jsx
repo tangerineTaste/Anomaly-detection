@@ -5,42 +5,43 @@ import { BsFillCameraFill, BsRobot } from "react-icons/bs";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import LineChart from "../../components/LineChart";
-import PieChart from "../../components/PieChart";
 
+const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
+  // ✅ Flask API 경로
+  const API_URL = "http://127.0.0.1:5000/dashboard/stats";
 
-const Dashboard = ({ boxWidth = "380px", boxHeight = "180px" }) => {
-  const API_URL = "http://127.0.0.1:5000/user";
-
-  const [fireIncidentCount, setFireIncidentCount] = useState(0);
-  const [verifiedIncidentCount, setVerifiedIncidentCount] = useState(0);
-  const [incidentData, setIncidentData] = useState([]);
+  // ✅ 통계 데이터 저장
+  const [stats, setStats] = useState({
+    today_incidents: 0,
+    verified_events: 0,
+    ai_false_rate: 0,
+    active_events: 0,
+    total_cameras: 0,
+  });
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchStats = async () => {
       try {
-        const fireRes = await fetch(`${API_URL}/incidents/count/fire`);
-        const verifiedRes = await fetch(`${API_URL}/incidents/count/verified`);
-        const monthlyRes = await fetch(`${API_URL}/incidents/monthly-count`);
-
-        setFireIncidentCount((await fireRes.json()).fire_incident_count || 0);
-        setVerifiedIncidentCount(
-          (await verifiedRes.json()).verified_incident_count || 0
-        );
-        setIncidentData(await monthlyRes.json());
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        setStats(data);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching dashboard stats:", err);
       }
     };
-    fetchData();
+    fetchStats();
   }, []);
 
-  const donutData = [
-    { id: "Single", label: "Single", value: 60, color: "#6366F1" },
-    { id: "Promotions", label: "Promotions", value: 25, color: "#06B6D4" },
-    { id: "Unbinded", label: "Unbinded", value: 15, color: "#F43F5E" },
+  // 🔶 카드 리스트
+  const cardItems = [
+    { title: "오늘 감지된 이상행동", value: stats.today_incidents },
+    { title: "검증 완료된 이벤트", value: stats.verified_events },
+    { title: "실시간 대응 중 이벤트", value: stats.active_events },
+    { title: "활성 카메라수", value: stats.total_cameras },
+    { title: "오프라인 카메라", value: 0 },
   ];
 
-  // SVG icons (1~3 변경됨)
+    // SVG icons (1~3 변경됨)
   const icons = [
     // 1
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
@@ -67,217 +68,174 @@ const Dashboard = ({ boxWidth = "380px", boxHeight = "180px" }) => {
   ];
 
   return (
-    <Box sx={{backgroundColor: 'rgb(249 255 0 / 14%)',}} p={4} minHeight={"100vh"}>
+    <Box sx={{ backgroundColor: "#f8f9f9", height: "auto",}} p={4} minHeight={"100vh"}>
       <Grid container spacing={3}>
-        {/* ----------------- 통계 박스 6개 (3개씩 2줄) ----------------- */}
+        {/* ----------------- 통계 카드 ----------------- */}
         <Grid item xs={12} md={8}>
           <Grid container spacing={2}>
-            {[
-              { title: "오늘 감지된 이상행동", value: fireIncidentCount, },
-              { title: "검증 완료된 이벤트", value: verifiedIncidentCount, },
-              { title: "AI 오탐지율", value: "8.4%" },
-              { title: "실시간 대응 중 이벤트", value: 3, },
-              { title: "활성 카메라수", value: 6, },
-              { title: "오프라인 카메라", value: 8, },
-            ].map((item, i) => (
+            {cardItems.map((item, i) => (
               <Grid item xs={12} sm={6} md={4} key={i}>
                 <Box
                   sx={{
                     backgroundColor: "#fff",
                     borderRadius: "16px",
                     p: 3,
-                    width: "334px",
+                    width: "193px",
                     height: boxHeight,
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
                     alignItems: "flex-start",
+                    border: "1px solid #f0f0f0",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
                   }}
                 >
-                  <Box sx={{ color: "#f56214" }}>
-                      {icons[i]}
-                      <Typography sx={{ fontSize: "16px", color: "#1c1c1c", fontWeight: "600"}}>{item.title}</Typography>
-                  </Box>
-                  <Box sx={{ width : "100%" }}>
-                    <Typography sx={{ fontSize: "28px", fontWeight: 700, textAlign: "right" }}>{item.value}</Typography>
-                  </Box>
-                  {/*<Typography sx={{*/}
-                  {/*  fontSize: "13px",*/}
-                  {/*  fontWeight: 600,*/}
-                  {/*  color: item.changeColor,*/}
-                  {/*  backgroundColor: `${item.changeColor}10`,*/}
-                  {/*  borderRadius: "8px",*/}
-                  {/*  px: 1.2, py: 0.3,*/}
-                  {/*}}>{item.change}</Typography>*/}
+                  <Typography sx={{ fontSize: "16px", fontWeight: 600, color: "#1c1c1c", wordBreak: "keep-all", }}>
+                    {item.title}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: "36px",
+                      fontWeight: 700,
+                      textAlign: "right",
+                      width: "100%",
+                      color: "#f56214",
+                      lineHeight: "1",
+                    }}
+                  >
+                    {item.value}
+                  </Typography>
                 </Box>
               </Grid>
             ))}
           </Grid>
-        </Grid>
-
-        {/* 챗봇 박스 */}
-        <Grid item xs={12} md={4}>
-          <Box
+          <Grid item xs={12} md={8}>
+            <Box
               sx={{
-                background: "#f56214",
+                background: "#fff",
                 borderRadius: "16px",
-                p: 4,
-                height: "100%",
-                minHeight: "377px",
-                color: "#fff",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                position: "relative",
+                p: 3,
+                marginTop: "20px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
               }}
             >
-              {/* Header */}
-              <Box>
-                <Typography variant="h4" sx={{ fontWeight: "bold" }}>
-                  Security Chatbot
-                </Typography>
-                <Typography sx={{ color: "rgba(255,255,255,0.9)" }}>
-                  AI 기반 위험 상황 분석 및 자동 응답 시스템
-                </Typography>
-              </Box>
+              <Typography sx={{ fontWeight: "bold", mb: 2 }}>
+                월별 이상행동 통계
+              </Typography>
 
-              {/* 상태 요약 */}
-              <Box sx={{ mt: 3, lineHeight: 1.8 }}>
-                <Typography>• 현재 활성 세션: 3</Typography>
-                <Typography>• 대기 중 응답 요청: 1</Typography>
-                <Typography>• 마지막 대화: CCTV 3번 이상행동 감지</Typography>
+              <Box sx={{ height: "250px" }}>
+                <LineChart isDashboard={true} data={stats.monthly_data || []} />
               </Box>
-
-              {/* 버튼 그룹 */}
-              <Box sx={{ display: "flex", gap: 1 , textDecoration: "none",}}>
-                <Link to="/chatbot" style={{ textDecoration: "none" }}>
-                  <Box
-                    sx={{
-                      background: "#fff",
-                      color: "#f56214",
-                      borderRadius: "10px",
-                      px: 2.5,
-                      py: 1,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    대화 시작하기
-                  </Box>
-                </Link>
-                {/*<Link to="/chatlogs">*/}
-                {/*  <Box sx={{*/}
-                {/*    background: "rgba(255,255,255,0.2)",*/}
-                {/*    borderRadius: "10px",*/}
-                {/*    px: 2.5,*/}
-                {/*    py: 1,*/}
-                {/*    fontWeight: 600,*/}
-                {/*    cursor: "pointer",*/}
-                {/*  }}>로그 보기</Box>*/}
-                {/*</Link>*/}
-              </Box>
-
-              {/* 아이콘 */}
-              <BsRobot
-                style={{
-                  position: "absolute",
-                  right: "24px",
-                  bottom: "16px",
-                  fontSize: "100px",
-                  opacity: 0.1,
-                }}
-              />
             </Box>
-
+          </Grid>
         </Grid>
 
-        {/* ----------------- 월별 이상행동 그래프 ----------------- */}
-        <Grid item xs={12} md={8}>
-          <Box sx={{ background: "#fff", borderRadius: "16px", p: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.06)" }}>
-            <Typography sx={{ fontWeight: "bold", mb: 2 }}>월별 이상행동 통계</Typography>
-            <Box sx={{ height: "250px" }}>
-              <LineChart isDashboard={true} data={incidentData} />
-            </Box>
-          </Box>
-        </Grid>
+        {/*/!* ----------------- 월별 이상행동 그래프 ----------------- *!/*/}
+        {/*  <Grid item xs={12} md={8}>*/}
+        {/*    <Box*/}
+        {/*      sx={{*/}
+        {/*        background: "#fff",*/}
+        {/*        borderRadius: "16px",*/}
+        {/*        p: 3,*/}
+        {/*        boxShadow: "0 4px 12px rgba(0,0,0,0.06)",*/}
+        {/*      }}*/}
+        {/*    >*/}
+        {/*      <Typography sx={{ fontWeight: "bold", mb: 2 }}>*/}
+        {/*        월별 이상행동 통계*/}
+        {/*      </Typography>*/}
 
-          {/* ESL Usage 박스 부분*/}
+        {/*      <Box sx={{ height: "250px" }}>*/}
+        {/*        <LineChart isDashboard={true} data={stats.monthly_data || []} />*/}
+        {/*      </Box>*/}
+        {/*    </Box>*/}
+        {/*  </Grid>*/}
+
+        {/* ----------------- 챗봇 박스 ----------------- */}
         <Grid item xs={12} md={4}>
-          <Box sx={{
-            backgroundColor: "#fff",
-            borderRadius: "16px",
-            p: 3,
-            height: "338px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-            position: "relative",
-          }}>
-            <Typography sx={{ fontWeight: "bold", mb: 2, alignSelf: "flex-start" }}>
-              ESL Usage
-            </Typography>
-
-            {/* 차트와 중앙 텍스트를 담는 컨테이너 */}
-            <Box sx={{
+          <Box
+            sx={{
+              background: "#f56214",
+              borderRadius: "16px",
+              p: 4,
+              height: "100%",
+              minHeight: "377px",
+              color: "#fff",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-start",
               position: "relative",
-              height: "200px",
-              width: "200px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
-
-              {/* 도넛 차트 */}
-               <PieChart isDashboard={true} data={donutData} />
+            }}
+          >
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: "bold" , fontSize: "36px"}}>
+                Security Chatbot
+              </Typography>
+              <Typography sx={{ color: "rgba(255,255,255,0.9)", marginBottom: "30px"}}>
+                AI 기반 위험 상황 분석 및 자동 응답 시스템
+              </Typography>
             </Box>
 
-            {/* 범례 */}
-            <Box sx={{
-              display: "flex",
-              gap: 2,
-              mt: 3,
-              justifyContent: "center",
-              flexWrap: "wrap"
-            }}>
-              {donutData.map((item) => (
-                <Box key={item.id} sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
-                  <Box sx={{
-                    width: "12px",
-                    height: "12px",
-                    borderRadius: "3px",
-                    backgroundColor: item.color,
-                  }} />
-                  <Typography sx={{ fontSize: "13px", color: "#64748B" }}>
-                    {item.label}
-                  </Typography>
+            {/*<Box sx={{ mt: 3, lineHeight: 1.8 }}>*/}
+            {/*  <Typography>• 현재 활성 세션: 3</Typography>*/}
+            {/*  <Typography>• 대기 중 응답 요청: 1</Typography>*/}
+            {/*  <Typography>• 마지막 대화: CCTV 3번 이상행동 감지</Typography>*/}
+            {/*</Box>*/}
+
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Link to="/chatbot" style={{ textDecoration: "none" }}>
+                <Box
+                  sx={{
+                    background: "#fff",
+                    color: "#f56214",
+                    borderRadius: "10px",
+                    px: 2.5,
+                    py: 1,
+                    fontWeight: 600,
+                    padding: "12px 20px",
+                    cursor: "pointer",
+                  }}
+                >
+                  대화 시작하기
                 </Box>
-              ))}
+              </Link>
             </Box>
+
+            <BsRobot
+              style={{
+                position: "absolute",
+                right: "24px",
+                bottom: "16px",
+                fontSize: "100px",
+                opacity: 0.1,
+              }}
+            />
           </Box>
         </Grid>
 
         {/* ----------------- CCTV 피드 ----------------- */}
         <Grid item xs={12}>
-          <Box sx={{
-            background: "#fff",
-            borderRadius: "16px",
-            p: 3,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-          }}>
+          <Box
+            sx={{
+              background: "#fff",
+              borderRadius: "16px",
+              p: 3,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+            }}
+          >
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <BsFillCameraFill style={{ color: "#f56214", fontSize: "24px" }} />
+                {/*<BsFillCameraFill style={{ color: "#f56214", fontSize: "24px" }} />*/}
                 <Typography sx={{ fontWeight: "bold" }}>실시간 CCTV 피드</Typography>
               </Box>
               <Link to="/view_feed">
-                <IconButton><AiOutlineArrowRight /></IconButton>
+                <IconButton>
+                  <AiOutlineArrowRight />
+                </IconButton>
               </Link>
             </Box>
+
             <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-              {[1, 2, 3].map(i => (
+              {[1, 2, 3].map((i) => (
                 <img
                   key={i}
                   src={"../../assets/vid-evidence.jpg"}

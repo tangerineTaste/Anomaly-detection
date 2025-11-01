@@ -344,33 +344,78 @@ function CustomToolbar({ setFilterButtonEl, fetchCameras }) {
   };
 
   return (
-    <Box
-      sx={{ flexGrow: 1, borderRadius: "8px 8px 0 0" }}
-      backgroundColor={"#fefffe"}
-    >
-      <Toolbar variant="dense" disableGutters>
-        <Box p={2} display={"flex"} alignItems={"center"}>
-          <Button onClick={() => setShowForm(!showForm)} sx={buttonSx}>
-            Setup Camera
-          </Button>
+    <Box>
+      {/* 안내 섹션 */}
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        bgcolor="#fff"
+        px={4}
+        py={3}
+        borderBottom="1px solid #ddd"
+        padding="0 0px"
+      >
+        <Box>
+          <Typography variant="h5" fontSize="28px" fontWeight="bold" color="#1c1c1c" marginBottom="10px">
+            카메라 등록 / 수정 안내
+          </Typography>
+          <Typography variant="body2" fontSize="16px" color="#666" marginBottom="20px">
+            CCTV 카메라 등록과 설정을 관리할 수 있는 페이지입니다.<br />
+            새로운 카메라를 추가하거나 기존 정보를 수정할 수 있습니다.
+          </Typography>
         </Box>
 
-        <Box sx={{ flexGrow: 1 }} />
-        <GridToolbarContainer
-          sx={{ p: 1, display: "flex", alignItems: "center" }}
+        <Box
+          component="img"
+          src="/assets/faq_illustration.png"
+          alt="Camera Illustration"
+          sx={{ width: 220, height: "auto", objectFit: "contain" }}
+        />
+      </Box>
+
+      {/* 중앙 정렬된 검색 + 버튼 */}
+      <Box
+        sx={{
+          flexGrow: 1,
+          borderRadius: "8px 8px 0 0",
+          backgroundColor: "#fefffe",
+        }}
+      >
+        <Toolbar
+          variant="dense"
+          disableGutters
+          sx={{
+            display: "flex",
+            justifyContent: "flex-start",
+            alignItems: "center",
+            gap: 2,
+            py: 2,
+            padding: "20px 0px",
+          }}
         >
-          <Box p={2}>
+          <GridToolbarContainer
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              backgroundColor: "#fff",
+              borderRadius: "8px",
+              padding: "4px 0 0",
+            }}
+          >
             <GridToolbarQuickFilter
               variant="outlined"
-              size={"small"}
-              sx={{ padding: "4", borderColor: "#DCDDDD", color: "#202020" }}
+              size="small"
+              sx={{
+                borderColor: "#DCDDDD",
+                color: "#202020",
+                width: "250px",
+              }}
             />
-          </Box>
-          <Box p={2}>
             <GridToolbarFilterButton
               variant="outlined"
               sx={{
-                padding: "4",
                 height: "3.125em",
                 borderColor: "#bcbdbd",
                 color: "#202020",
@@ -378,17 +423,21 @@ function CustomToolbar({ setFilterButtonEl, fetchCameras }) {
               }}
               ref={setFilterButtonEl}
             />
-          </Box>
-        </GridToolbarContainer>
+          </GridToolbarContainer>
+
+          <Button onClick={() => setShowForm(true)} sx={buttonSx}>
+            카메라 등록
+          </Button>
+        </Toolbar>
+
+        {/* 모달 */}
         {showForm && (
           <AddCameraForm
-            onClose={() => setShowForm(false)}
-            onSubmit={handleFormSubmit}
             initialValues={initialValues}
             validationSchema={checkoutSchema}
           />
         )}
-      </Toolbar>
+      </Box>
     </Box>
   );
 }
@@ -496,103 +545,112 @@ const CameraSettings = () => {
       flex: 1, // Space columns equally
       cellClassName: "name-column--cell",
     },
-    {
-      field: "action",
-      headerName: "Action",
-      flex: 1, // Space columns equally
-      cellClassName: "name-column--cell",
-      disableColumnMenu: true,
-      renderCell: (params) => (
-        <Box display="flex">
-          <IconButton>
-            <MdEdit
-              style={{
-                color: colors.blueAccents[500],
-                width: "15px",
-                height: "15px",
-              }}
-            />
-          </IconButton>
-          <IconButton>
-            <BsTrash3Fill
-              onClick={() => handleDelete(params.row.id)}
-              style={{
-                color: colors.blueAccents[500],
-                width: "15px",
-                height: "15px",
-              }}
-            />
-          </IconButton>
-        </Box>
-      ),
-    },
+    // {
+    //   field: "action",
+    //   headerName: "Action",
+    //   flex: 1, // Space columns equally
+    //   cellClassName: "name-column--cell",
+    //   disableColumnMenu: true,
+    //   renderCell: (params) => (
+    //     <Box display="flex">
+    //       <IconButton>
+    //         <MdEdit
+    //           style={{
+    //             color: colors.blueAccents[500],
+    //             width: "15px",
+    //             height: "15px",
+    //           }}
+    //         />
+    //       </IconButton>
+    //       <IconButton>
+    //         <BsTrash3Fill
+    //           onClick={() => handleDelete(params.row.id)}
+    //           style={{
+    //             color: colors.blueAccents[500],
+    //             width: "15px",
+    //             height: "15px",
+    //           }}
+    //         />
+    //       </IconButton>
+    //     </Box>
+    //   ),
+    // },
   ];
 
   return (
-    <Box backgroundColor={colors.primary[500]} p={3} minHeight={"100vh"}>
-      <Box
-        p={1}
-        m="8px 0 0 0"
-        width="100%"
-        height="80vh"
-        sx={{
-          "& .MuiDataGrid-root": {
-            border: "none",
-            fontSize: "14px",
-            "& .MuiDataGrid-cell:focus": {
-              outline: "none", // Remove the focus outline
-            },
-          },
+    <Box sx={{ width: "100%", minHeight: "92vh", backgroundColor: "#f8f9f9" }}>
+    <Box
+      p={4}
+      width="100%"
+      height="92vh"
+      sx={{
+        "& .MuiDataGrid-root": {
+          border: "none",
+          fontSize: "14px",
+          backgroundColor: "#fff",
+          padding: "30px",
+          borderRadius: "20px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+        },
 
-          "& .MuiDataGrid-cell": {
-            borderBottom: "none",
+        "& .MuiDataGrid-columnHeaders": {
+          backgroundColor: "#fff",
+          fontWeight: "bold",
+          borderTop: "3px solid #1c1c1c",
+          color: "#1c1c1c",
+          fontSize: "15px",
+          minHeight: "56px !important",
+          borderRadius: "0", // ✅ 헤더 radius 제거
+        },
+
+        "& .MuiDataGrid-iconSeparator": {
+          display: "none !important", // ✅ 헤더 세로선 제거
+        },
+
+        "& .MuiDataGrid-columnHeaderTitle": {
+          fontWeight: "bold",
+        },
+
+        "& .MuiDataGrid-cell": {
+          color: "#1c1c1c",
+          //borderBottom: "1px solid #ddd", // 행 구분선
+          padding: "12px 8px",
+        },
+
+        "& .MuiDataGrid-row:hover": {
+          backgroundColor: "#fafafa", // hover 효과
+        },
+
+        "& .MuiDataGrid-footerContainer": {
+          borderTop: "1px solid #ddd",
+          backgroundColor: "#fff",
+          borderRadius: "0 0 8px 8px",
+        },
+
+        "& .MuiDataGrid-toolbarContainer": {
+          backgroundColor: "#fff",
+          //borderBottom: "1px solid #ddd",
+        },
+      }}
+    >
+      <DataGrid
+        disableColumnSelector
+        disableDensitySelector
+        rows={Camera}
+        columns={columns}
+        components={{ Toolbar: CustomToolbar }}
+        componentsProps={{
+          panel: {
+            anchorEl: filterButtonEl,
+            placement: "bottom-end",
           },
-          "& .name-column--cell": {
-            backgroundColor: colors.secondary[500],
-          },
-          "& .MuiDataGrid-columnHeaders": {
-            backgroundColor: colors.secondary[500],
-            borderBottom: "none",
-            color: colors.blackAccents[300],
-          },
-          "& .MuiDataGrid-columnHeaderTitle": {
-            fontSize: "15px",
-          },
-          "& .MuiDataGrid-virtualScroller": {
-            backgroundColor: colors.secondary[500],
-          },
-          "& .MuiDataGrid-footerContainer": {
-            borderTop: "none",
-            backgroundColor: colors.secondary[500],
-            borderRadius: "0 0 8px 8px",
-          },
-          "& .MuiCheckbox-root": {
-            color: `${colors.primary[500]} !important`,
-          },
-          "& .MuiDataGrid-toolbarContainer .MuiButton-text": {
-            color: `${colors.blackAccents[100]} !important`,
-            fontSize: "14px",
+          toolbar: {
+            setFilterButtonEl,
+            fetchCameras,
           },
         }}
-      >
-        <DataGrid
-          disableColumnSelector
-          disableDensitySelector
-          rows={Camera}
-          columns={columns}
-          components={{ Toolbar: CustomToolbar }}
-          componentsProps={{
-            panel: {
-              anchorEl: filterButtonEl,
-              placement: "bottom-end",
-            },
-            toolbar: {
-              setFilterButtonEl,
-              fetchCameras,
-            },
-          }}
-        />
-      </Box>
+      />
+    </Box>
     </Box>
   );
 };

@@ -87,35 +87,55 @@ export const themeSettings = (mode) => {
     },
     //This Will be setting the Typography of the page by default
     typography: {
-      fontFamily: ["Raleway", "sans-serif"].join(","),
+      fontFamily: ["NanumSquare", "Noto Sans KR", "sans-serif"].join(","),
       fontSize: 12,
       h1: {
-        fontFamily: ["Raleway", "sans-serif"].join(","),
+        fontFamily: ["NanumSquare", "Noto Sans KR", "sans-serif"].join(","),
         fontSize: 40,
+        fontWeight: 800,
       },
       h2: {
-        fontFamily: ["Raleway", "sans-serif"].join(","),
+        fontFamily: ["NanumSquare", "Noto Sans KR", "sans-serif"].join(","),
         fontSize: 32,
+        fontWeight: 800,
       },
       h3: {
-        fontFamily: ["Raleway", "sans-serif"].join(","),
+        fontFamily: ["NanumSquare", "Noto Sans KR", "sans-serif"].join(","),
         fontSize: 24,
+        fontWeight: 700,
       },
       h4: {
-        fontFamily: ["Raleway", "sans-serif"].join(","),
+        fontFamily: ["NanumSquare", "Noto Sans KR", "sans-serif"].join(","),
         fontSize: 20,
+        fontWeight: 700,
       },
       h5: {
-        fontFamily: ["Raleway", "sans-serif"].join(","),
+        fontFamily: ["NanumSquare", "Noto Sans KR", "sans-serif"].join(","),
         fontSize: 16,
+        fontWeight: 700,
       },
       h6: {
-        fontFamily: ["Raleway", "sans-serif"].join(","),
+        fontFamily: ["NanumSquare", "Noto Sans KR", "sans-serif"].join(","),
         fontSize: 14,
+        fontWeight: 700,
       },
       h7: {
-        fontFamily: ["Raleway", "sans-serif"].join(","),
+        fontFamily: ["NanumSquare", "Noto Sans KR", "sans-serif"].join(","),
         fontSize: 12,
+        fontWeight: 700,
+      },
+      body1: {
+        fontFamily: ["NanumSquare", "Noto Sans KR", "sans-serif"].join(","),
+        fontWeight: 400,
+      },
+      body2: {
+        fontFamily: ["NanumSquare", "Noto Sans KR", "sans-serif"].join(","),
+        fontWeight: 400,
+      },
+      button: {
+        fontFamily: ["NanumSquare", "Noto Sans KR", "sans-serif"].join(","),
+        fontWeight: 700,
+        textTransform: "none",
       },
     },
   };
@@ -134,7 +154,7 @@ export const useMode = () => {
     []
   );
 
-  const theme = useMemo(() => createTheme(themeSettings), []);
+  const theme = useMemo(() => createTheme(themeSettings("light")), []);
 
   return [theme, colorMode];
 };

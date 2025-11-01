@@ -84,8 +84,7 @@ const MyProSidebar = () => {
   // ✅ 경로 기반으로 메뉴 상태 자동 설정
   const getInitialMenu = (path) => {
     if (path === "/dashboard" || path === "/") return "Dashboard";
-    if (path.startsWith("/settings/camsetting")) return "카메라 등록";
-    if (path.startsWith("/settings/dispatchsettings")) return "카메라 수정";
+    if (path === "/settings/camsetting") return "카메라 등록/수정";
     if (path === "/notifications") return "CCTV 보기";
     if (path === "/incidents") return "이미지 관리";
     if (path === "/faq") return "상가 등록";
@@ -115,7 +114,7 @@ const MyProSidebar = () => {
     <Box
       sx={{
         position: "fixed",
-        top: "70px",
+        top: "69px",
         left: 0,
         height: "calc(100vh - 70px)",
         zIndex: 10000,
@@ -161,118 +160,14 @@ const MyProSidebar = () => {
                 setSelected={setSelected}
               />
 
-              {/* 카메라 관리 */}
-              <Box sx={{ margin: "4px 12px 4px 8px" }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    cursor: "pointer",
-                    userSelect: "none",
-                    px: 2,
-                    py: 1.5,
-                    borderRadius: "10px",
-                    transition: "all 0.2s ease",
-                    color: isCameraMenuOpen ? "#f56214" : "#444",
-                    backgroundColor: isCameraMenuOpen
-                      ? "rgb(255 167 0 / 24%)"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor: "rgb(255 167 0 / 24%)",
-                      color: "#f56214",
-                    },
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsCameraMenuOpen((prev) => !prev);
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <LuSettings style={{ fontSize: 20 }} />
-                    <Typography sx={{ fontWeight: 500, fontSize: "16px" }}>
-                      카메라 관리
-                    </Typography>
-                  </Box>
-
-                  {/* 화살표 (열기/닫기 회전) */}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    width="18"
-                    height="18"
-                    style={{
-                      transition: "transform 0.2s ease",
-                      transform: isCameraMenuOpen
-                        ? "rotate(0deg)"
-                        : "rotate(-90deg)",
-                    }}
-                  >
-                    <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
-                  </svg>
-                </Box>
-
-                {isCameraMenuOpen && (
-                  <Box
-                    sx={{
-                      pl: 4,
-                      mt: 1,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 1,
-                    }}
-                  >
-                    <Box
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsCameraMenuOpen(true); // ✅ 클릭해도 접히지 않게
-                        setSelected("카메라 등록");
-                        history.push("/settings/camsetting");
-                      }}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        cursor: "pointer",
-                        py: 1,
-                        borderRadius: "8px",
-                        "&:hover": {
-                          backgroundColor: "rgb(255 167 0 / 24%)",
-                          color: "#f56214",
-                        },
-                      }}
-                    >
-                      <AiOutlineCamera style={{ fontSize: 18 }} />
-                      <Typography sx={{ fontWeight: 500 }}>카메라 등록</Typography>
-                    </Box>
-
-                    <Box
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsCameraMenuOpen(true); // ✅ 접히지 않게 유지
-                        setSelected("카메라 수정");
-                        history.push("/settings/dispatchsettings");
-                      }}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        cursor: "pointer",
-                        py: 1,
-                        borderRadius: "8px",
-                        "&:hover": {
-                          backgroundColor: "rgb(255 167 0 / 24%)",
-                          color: "#f56214",
-                        },
-                      }}
-                    >
-                      <BiUserVoice style={{ fontSize: 18 }} />
-                      <Typography sx={{ fontWeight: 500 }}>카메라 수정</Typography>
-                    </Box>
-                  </Box>
-                )}
-              </Box>
+              {/* 카메라 등록/수정 */}
+              <Item
+                title="카메라 등록/수정"
+                to="/settings/camsetting"
+                icon={<MdOutlineNotificationAdd style={{ fontSize: 20 }} />}
+                selected={selected}
+                setSelected={setSelected}
+              />
 
               {/* CCTV 보기 */}
               <Item
@@ -308,21 +203,21 @@ const MyProSidebar = () => {
 
               {/* 상가 등록 */}
               <Item
-                title="상가 등록"
+                title="상가 등록/수정"
                 to="/faq"
                 icon={<AiOutlineQuestionCircle style={{ fontSize: 20 }} />}
                 selected={selected}
                 setSelected={setSelected}
               />
 
-              {/* 상가 수정 */}
-              <Item
-                title="상가 수정"
-                to="/contact"
-                icon={<FiHeadphones style={{ fontSize: 20 }} />}
-                selected={selected}
-                setSelected={setSelected}
-              />
+              {/*/!* 상가 수정 *!/*/}
+              {/*<Item*/}
+              {/*  title="상가 수정"*/}
+              {/*  to="/contact"*/}
+              {/*  icon={<FiHeadphones style={{ fontSize: 20 }} />}*/}
+              {/*  selected={selected}*/}
+              {/*  setSelected={setSelected}*/}
+              {/*/>*/}
             </Box>
           </Menu>
         </Box>

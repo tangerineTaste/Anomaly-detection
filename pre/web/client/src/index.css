@@ -5,7 +5,34 @@ body,
 #root,
 .app,
 .content {
-  font-family: "Source Sance Pro", sans-serif;
+  font-family: 'NanumSquare', sans-serif !important;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow-y: scroll;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* 전체 화면 높이 채우기 */
+}
+
+.footer {
+  margin-top: auto; /* 푸터 자동으로 하단 정렬 */
+}
+
+.MuiFormHelperText-root.Mui-error {
+  font-size: 13px !important;
+  font-weight: 400;
+  line-height: 1.6;
 }
 
 ::-webkit-scrollbar {
@@ -26,3 +53,4 @@ body,
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+

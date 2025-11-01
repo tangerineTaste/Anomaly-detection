@@ -1,0 +1,349 @@
+/*main {*/
+/*  padding-top: 72px;*/
+/*}*/
+
+/* -----------------------------
+   기본 컨테이너
+----------------------------- */
+.container {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* -----------------------------
+   섹션 공통 스타일
+----------------------------- */
+.section {
+  /*padding: 100px 0;*/
+}
+
+/* -----------------------------
+   HERO 섹션 (첫 화면)
+----------------------------- */
+/*.hero {*/
+/*  background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url("%PUBLIC_URL%/assets/main_bg.jpg");*/
+/*  background-size: cover;*/
+/*  background-position: center;*/
+/*}*/
+
+.hero .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 80px;
+  padding: 180px 0;
+  margin-top: 72px;
+}
+
+/* 왼쪽 텍스트 영역 */
+.hero__left {
+  flex: 1;
+  text-align: center;
+}
+
+.hero__title {
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: #ffffff;
+  margin: 0 0 5px 0;
+}
+
+.hero__brand {
+  color: #f56214;
+  font-size: 46px;
+  font-weight: 900;
+  line-height: 1.1em;
+  margin: 0 0 30px 0;
+}
+
+.hero__divider {
+  width: 1px;              /* 구분선 두께 */
+  height: 60px;            /* 원하는 높이 */
+  background-color: #ffffff;
+  margin: 0 auto;
+}
+
+.hero__desc {
+  color: #ffffff;
+  font-size: 18px;
+  line-height: 1.5;
+  margin: 30px 0 30px 0;
+}
+
+/* -----------------------------
+   서비스 모델 섹션
+----------------------------- */
+.service {
+  background: #fff;
+  padding: 120px 0;
+}
+
+.service__container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* 왼쪽 텍스트 영역 */
+.service__text {
+  flex: 0 0 300px;
+}
+
+.service__title {
+  font-size: 36px;
+  font-weight: 400;
+  color: #1c1c1c;
+  line-height: 1.3;
+  letter-spacing: -0.05rem;
+  margin: 0 0 12px 0;
+}
+
+.service__desc {
+  font-size: 18px;
+  color: #666;
+  line-height: 1.6;
+  letter-spacing: -0.05rem;
+  margin: 0 0 203px 0;
+}
+
+.service__arrows {
+  display: flex;
+  gap: 10px;
+}
+
+.arrow-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #666;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.arrow-btn:hover {
+  background: #f56214;
+  color: #fff;
+  border-color: #f56214;
+}
+
+/* 카드 리스트 */
+.service__cards {
+  flex: 1;
+  display: flex;
+  gap: 24px;
+  justify-content: flex-start;
+}
+
+.service__cards-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 1000px; /* 보여줄 카드 영역 폭 (원하는대로 조정 가능) */
+  overflow: hidden; /* ✅ 핵심: 나머지 카드 가려줌 */
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.service__card {
+  width: 280px;
+  border-radius: 16px;
+  background: #fff;
+  border:1px solid #ddd;
+  /*box-shadow: 0 3px 8px rgba(0,0,0,0.08);*/
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+/*.service__card:hover {*/
+/*  transform: translateY(-4px);*/
+/*  box-shadow: 0 8px 20px rgba(0,0,0,0.12);*/
+/*}*/
+
+/* ✅ 이미지 위에 표시되는 주황색 태그 */
+.card__tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #f56214;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  border-radius: 20px;
+  padding: 6px 12px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* 카드 내 기술 태그 */
+.card__badges span {
+  display: inline-block;
+  font-size: 12px;
+  color: #fff;
+  background: #333;
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin-right: 4px;
+}
+
+.card__img {
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+}
+
+.card__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1c1c1c;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  word-break: keep-all;
+}
+
+.card__desc {
+  font-size: 16px;
+  color: #666;
+  line-height: 1.6;
+  margin: 10px 0 0 0;
+  word-break: keep-all;
+}
+
+.card__subdesc {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.card__keywords {
+  font-size: 14px;
+  color: #f56214;
+  font-weight: 600;
+  margin-top: 8px;
+  white-space: pre-line;
+}
+
+
+.card__img-wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.service__cards {
+  display: flex;
+  gap: 24px;
+  width: max-content;
+}
+
+.card__title,
+.card__desc {
+  white-space: pre-line;
+}
+
+.arrow-btn svg {
+  width: 18px;
+  height: 18px;
+  vertical-align: bottom;
+}
+
+.arrow-btn:hover {
+  background: #f56214;
+  color: #fff;
+  border-color: #f56214;
+}
+
+/* -----------------------------
+   PLATFORM SECTION (STEP1~3)
+----------------------------- */
+.platform {
+  background: #f8f9f9;
+  padding: 120px 0;
+  text-align: center;
+}
+
+.platform__title {
+  font-size: 36px;
+  font-weight: 300;
+  color: #1c1c1c;
+  margin: 0 0 12px 0;
+  line-height: 1.3;
+  letter-spacing: -0.05rem;
+}
+
+.platform__subtitle {
+  font-size: 18px;
+  color: #666;
+  margin-bottom: 100px;
+  line-height: 1.6;
+  letter-spacing: -0.05rem;
+}
+
+.platform__step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 80px;
+  margin-bottom: 160px;
+}
+
+/* ✅ STEP2에서만 쓰는 반대 정렬용 클래스 */
+.platform__step.reverse {
+  flex-direction: row-reverse;
+}
+
+
+.platform__text {
+  flex: 1;
+  text-align: left;
+}
+
+.platform__image {
+  flex: 1;
+}
+
+.platform__image img {
+  width: 100%;
+  border-radius: 16px;
+  object-fit: cover;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.platform__step-label {
+  display: inline-block;
+  font-size: 14px;
+  color: #f56214;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.platform__step-title {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.platform__headline {
+  font-size: 26px;
+  font-weight: 800;
+  color: #1c1c1c;
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+
+.platform__desc {
+  font-size: 16px;
+  color: #666;
+  line-height: 1.7;
+}
+
+
+
+

@@ -124,10 +124,11 @@ const Topbar = () => {
         position: "fixed",
         top: 0,
         left: 0,
-        right: 0,
+        width: "100vw",          // ✅ 브라우저 전체 폭으로 고정
+        maxWidth: "100vw",        // ✅ 더 이상 늘어나지 않게 제한
+        overflowX: "hidden",      // ✅ 내부 내용에 의한 흔들림 방지
+        backgroundColor: "#fff",
         zIndex: 10001,
-        backgroundColor: "#ffffff",
-        // boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         borderBottom: "1px solid #f0f0f0",
       }}
     >
