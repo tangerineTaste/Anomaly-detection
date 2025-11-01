@@ -67,6 +67,30 @@ damage_detectors = {}
 is_processing = False # 흡연 처리 중인지 확인하는 플래그
 is_abandon_processing = False # 유기물 처리 중인지 확인하는 플래그
 is_damage_processing = False # 폭행 처리 중인지 확인하는 플래그
+
+
+# --- 인시던트 저장 헬퍼 함수 ---
+def save_incident_if_needed(sid, incident_type, module_name):
+    """쿨다운을 확인하고 데이터베이스에 인시던트를 저장합니다."""
+    now = time.time()
+    last_saved_key = f"{sid}_{incident_type.lower().replace(' ', '_')}"
+    last_saved = last_incident_time.get(last_saved_key, 0)
+    if now - last_saved > INCIDENT_SAVE_COOLDOWN:
+        with app.app_context():
+            try:
+                incident = Incidents(
+                    type=incident_type,
+                    module=module_name,
+                    camera="Camera 1", # Placeholder
+                    status="Active"
+                )
+                incident.save()
+                last_incident_time[last_saved_key] = now
+                print(f"Incident saved: {incident_type} detected by {sid}")
+            except Exception as db_e:
+                print(f"Error saving {incident_type} incident to DB: {db_e}")
+
+
 import time
 
 video_threads = {} # 백그라운드 비디오 처리 스레드를 관리하기 위한 딕셔너리
@@ -160,23 +184,7 @@ def smoking_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if smoking is detected, with cooldown
             if "SMOKING" in prediction:
-                now = time.time()
-                last_saved_key = f"{sid}_smoking"
-                last_saved = last_incident_time.get(last_saved_key, 0)
-                if now - last_saved > INCIDENT_SAVE_COOLDOWN:
-                    with app.app_context():
-                        try:
-                            incident = Incidents(
-                                type="Smoking",
-                                module="SmokingDetector",
-                                camera="Camera 1", # Placeholder
-                                status="Active"
-                            )
-                            incident.save()
-                            last_incident_time[last_saved_key] = now
-                            print(f"Incident saved: Smoking detected by {sid}")
-                        except Exception as db_e:
-                            print(f"Error saving smoking incident to DB: {db_e}")
+                save_incident_if_needed(sid, "Smoking", "SmokingDetector")
 
             socketio.emit('response', {'image': 'data:image/jpeg;base64,' + encoded_image, 'prediction': prediction}, namespace='/ws/video_feed', room=sid)
             socketio.sleep(0.03) # ~33 FPS
@@ -234,23 +242,7 @@ def abandoned_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if abandoned item is detected, with cooldown
             if detection_results and detection_results.get('abandoned_items'):
-                now = time.time()
-                last_saved_key = f"{sid}_abandoned"
-                last_saved = last_incident_time.get(last_saved_key, 0)
-                if now - last_saved > INCIDENT_SAVE_COOLDOWN:
-                    with app.app_context():
-                        try:
-                            incident = Incidents(
-                                type="Abandoned Item",
-                                module="AbandonedItemDetector",
-                                camera="Camera 1", # Placeholder
-                                status="Active"
-                            )
-                            incident.save()
-                            last_incident_time[last_saved_key] = now
-                            print(f"Incident saved: Abandoned item detected by {sid}")
-                        except Exception as db_e:
-                            print(f"Error saving abandoned item incident to DB: {db_e}")
+                save_incident_if_needed(sid, "Abandoned Item", "AbandonedItemDetector")
 
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
@@ -309,23 +301,7 @@ def breakage_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if damage is detected, with cooldown
             if detection_results.get('is_danger'):
-                now = time.time()
-                last_saved_key = f"{sid}_damage"
-                last_saved = last_incident_time.get(last_saved_key, 0)
-                if now - last_saved > INCIDENT_SAVE_COOLDOWN:
-                    with app.app_context():
-                        try:
-                            incident = Incidents(
-                                type="Damage",
-                                module="DamageDetector",
-                                camera="Camera 1", # Placeholder
-                                status="Active"
-                            )
-                            incident.save()
-                            last_incident_time[last_saved_key] = now
-                            print(f"Incident saved: Damage detected by {sid}")
-                        except Exception as db_e:
-                            print(f"Error saving damage incident to DB: {db_e}")
+                save_incident_if_needed(sid, "Damage", "DamageDetector")
 
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
@@ -384,23 +360,7 @@ def violence_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if violence is detected, with cooldown
             if detection_results.get('is_violence'):
-                now = time.time()
-                last_saved_key = f"{sid}_violence"
-                last_saved = last_incident_time.get(last_saved_key, 0)
-                if now - last_saved > INCIDENT_SAVE_COOLDOWN:
-                    with app.app_context():
-                        try:
-                            incident = Incidents(
-                                type="Violence",
-                                module="ViolenceDetector",
-                                camera="Camera 1", # Placeholder
-                                status="Active"
-                            )
-                            incident.save()
-                            last_incident_time[last_saved_key] = now
-                            print(f"Incident saved: Violence detected by {sid}")
-                        except Exception as db_e:
-                            print(f"Error saving violence incident to DB: {db_e}")
+                save_incident_if_needed(sid, "Violence", "ViolenceDetector")
 
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
@@ -459,23 +419,7 @@ def weak_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if weak user is detected, with cooldown
             if detection_results.get('is_weak'):
-                now = time.time()
-                last_saved_key = f"{sid}_weak"
-                last_saved = last_incident_time.get(last_saved_key, 0)
-                if now - last_saved > INCIDENT_SAVE_COOLDOWN:
-                    with app.app_context():
-                        try:
-                            incident = Incidents(
-                                type="Weak User",
-                                module="WeakDetector",
-                                camera="Camera 1", # Placeholder
-                                status="Active"
-                            )
-                            incident.save()
-                            last_incident_time[last_saved_key] = now
-                            print(f"Incident saved: Weak user detected by {sid}")
-                        except Exception as db_e:
-                            print(f"Error saving weak user incident to DB: {db_e}")
+                save_incident_if_needed(sid, "Weak User", "WeakDetector")
 
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
