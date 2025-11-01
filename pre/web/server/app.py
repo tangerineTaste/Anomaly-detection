@@ -9,7 +9,7 @@ import numpy as np
 from flask_cors import CORS
 import logging
 import requests
-from threading import Thread
+from threading import Thread, Event
 from ultralytics import YOLO
 
 #Handel token releated operations
@@ -65,6 +65,7 @@ damage_detectors = {}
 is_processing = False # 흡연 처리 중인지 확인하는 플래그
 is_abandon_processing = False # 유기물 처리 중인지 확인하는 플래그
 is_damage_processing = False # 폭행 처리 중인지 확인하는 플래그
+video_threads = {} # 백그라운드 비디오 처리 스레드를 관리하기 위한 딕셔너리
 
 
 @jwt.expired_token_loader
@@ -125,131 +126,173 @@ sequence_data = deque(maxlen=30)
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
+def smoking_video_processing_thread(video_path, sid, stop_event):
+    """흡연 감지 비디오 처리를 위한 백그라운드 스레드"""
+    print(f"Starting smoking detection thread for {sid} with video {video_path}")
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error: Could not open video stream from {video_path}")
+        return
+
+    try:
+        while not stop_event.is_set():
+            ret, frame = cap.read()
+            if not ret:
+                print(f"End of video stream for {sid}, restarting.")
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0) # 비디오 루프
+                continue
+
+            prediction, processed_frame, landmarks = process_frame_for_smoking(frame, sequence_data, smoking_model, smoking_pose)
+            if landmarks.pose_landmarks:
+                mp_drawing.draw_landmarks(
+                    processed_frame, landmarks.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                    landmark_drawing_spec=mp_drawing.DrawingSpec(color=(245,117,66), thickness=2, circle_radius=2),
+                    connection_drawing_spec=mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2)
+                )
+            _, buffer = cv2.imencode('.jpg', processed_frame)
+            encoded_image = base64.b64encode(buffer).decode('utf-8')
+            
+            socketio.emit('response', {'image': 'data:image/jpeg;base64,' + encoded_image, 'prediction': prediction}, namespace='/ws/video_feed', room=sid)
+            socketio.sleep(0.03) # ~33 FPS
+    except Exception as e:
+        print(f'Exiting smoking detection thread for {sid} due to error: {e}')
+    finally:
+        cap.release()
+        print(f"Released video capture for {sid}")
+
+
 @socketio.on('connect', namespace='/ws/video_feed' )
 def test_connect():
-    print('Client connected to smoking feed')
+    sid = request.sid
+    print(f'Client connected to smoking feed: {sid}')
+    # Stop any existing thread for this session, just in case
+    if sid in video_threads:
+        video_threads[sid].set()
+
+    stop_event = Event()
+    video_threads[sid] = stop_event
+    
+    video_path = './uploads/C_3_10_1_BU_DYA_08-04_11-16-33_CC_RGB_DF2_M2.mp4'
+    socketio.start_background_task(target=smoking_video_processing_thread, video_path=video_path, sid=sid, stop_event=stop_event)
     
 @socketio.on('disconnect', namespace='/ws/video_feed')
 def test_disconnect():
-    print('Client disconnected from smoking feed')
-    
-@socketio.on('message', namespace='/ws/video_feed')
-def handle_message(data):
-    global is_processing
-    if is_processing:
-        return
-    is_processing = True
-    try:
-        if data.startswith('data:image/jpeg;base64,'):
-            base64_image = data.split(',')[1]
-            image_bytes = base64.b64decode(base64_image)
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            if frame is not None:
-                prediction, processed_frame, landmarks = process_frame_for_smoking(frame, sequence_data, smoking_model, smoking_pose)
-                if landmarks.pose_landmarks:
-                    mp_drawing.draw_landmarks(
-                        processed_frame, landmarks.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                        landmark_drawing_spec=mp_drawing.DrawingSpec(color=(245,117,66), thickness=2, circle_radius=2),
-                        connection_drawing_spec=mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2)
-                    )
-                _, buffer = cv2.imencode('.jpg', processed_frame)
-                encoded_image = base64.b64encode(buffer).decode('utf-8')
-                emit('response', {'image': 'data:image/jpeg;base64,' + encoded_image, 'prediction': prediction})
-    except Exception as e:
-        print(f'Error in smoking detection: {e}')
-    finally:
-        is_processing = False
+    sid = request.sid
+    print(f'Client disconnected from smoking feed: {sid}')
+    if sid in video_threads:
+        video_threads[sid].set() # Signal the thread to stop
+        del video_threads[sid]
+        print(f"Stopped video thread for {sid}")
 
 # --- 유기물 감지 웹소켓 핸들러 ---
+def abandoned_video_processing_thread(video_path, sid, stop_event):
+    """유기물 감지 비디오 처리를 위한 백그라운드 스레드"""
+    print(f"Starting abandoned item detection thread for {sid} with video {video_path}")
+    detector = AbandonedItemDetector(yolo_model=yolo_model)
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error: Could not open video stream from {video_path}")
+        return
+
+    try:
+        while not stop_event.is_set():
+            ret, frame = cap.read()
+            if not ret:
+                print(f"End of video stream for {sid}, restarting.")
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0) # 비디오 루프
+                continue
+
+            processed_frame, detection_results = detector.process_frame(frame)
+            _, buffer = cv2.imencode('.jpg', processed_frame)
+            encoded_image = base64.b64encode(buffer).decode('utf-8')
+            
+            socketio.emit('response', {
+                'image': 'data:image/jpeg;base64,' + encoded_image,
+                'detections': detection_results
+            }, namespace='/ws/abandoned_feed', room=sid)
+            socketio.sleep(0.03) # ~33 FPS
+    except Exception as e:
+        print(f'Exiting abandoned item detection thread for {sid} due to error: {e}')
+    finally:
+        cap.release()
+        print(f"Released video capture for {sid}")
+
 @socketio.on('connect', namespace='/ws/abandoned_feed')
 def connect_abandoned_feed():
     sid = request.sid
     print(f'Client connected to abandoned feed: {sid}')
-    abandoned_detectors[sid] = AbandonedItemDetector(yolo_model=yolo_model)
-    print(f"Created new AbandonedItemDetector for session {sid}")
+    if sid in video_threads:
+        video_threads[sid].set()
+
+    stop_event = Event()
+    video_threads[sid] = stop_event
+
+    video_path = './uploads/C_3_11_29_BU_SMC_08-07_16-19-38_CD_RGB_DF2_F1.mp4'
+    socketio.start_background_task(target=abandoned_video_processing_thread, video_path=video_path, sid=sid, stop_event=stop_event)
 
 @socketio.on('disconnect', namespace='/ws/abandoned_feed')
 def disconnect_abandoned_feed():
     sid = request.sid
-    if sid in abandoned_detectors:
-        del abandoned_detectors[sid]
-        print(f"Removed AbandonedItemDetector for session {sid}")
     print(f'Client disconnected from abandoned feed: {sid}')
-
-@socketio.on('message', namespace='/ws/abandoned_feed')
-def handle_abandoned_message(data):
-    global is_abandon_processing
-    if is_abandon_processing:
-        return
-    is_abandon_processing = True
-    try:
-        sid = request.sid
-        if sid not in abandoned_detectors:
-            return
-        if data.startswith('data:image/jpeg;base64,'):
-            base64_image = data.split(',')[1]
-            image_bytes = base64.b64decode(base64_image)
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            if frame is not None:
-                detector = abandoned_detectors[sid]
-                processed_frame, detection_results = detector.process_frame(frame)
-                _, buffer = cv2.imencode('.jpg', processed_frame)
-                encoded_image = base64.b64encode(buffer).decode('utf-8')
-                emit('response', {
-                    'image': 'data:image/jpeg;base64,' + encoded_image,
-                    'detections': detection_results
-                }, namespace='/ws/abandoned_feed')
-    except Exception as e:
-        print(f'Error processing abandoned frame for session {request.sid}: {e}')
-    finally:
-        is_abandon_processing = False
+    if sid in video_threads:
+        video_threads[sid].set()
+        del video_threads[sid]
+        print(f"Stopped video thread for {sid}")
 
 # --- 폭행 감지 웹소켓 핸들러 ---
+def damage_video_processing_thread(video_path, sid, stop_event):
+    """폭행 감지 비디오 처리를 위한 백그라운드 스레드"""
+    print(f"Starting damage detection thread for {sid} with video {video_path}")
+    detector = DamageDetector(yolo_model_path='./yolov8n.pt')
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error: Could not open video stream from {video_path}")
+        return
+
+    try:
+        while not stop_event.is_set():
+            ret, frame = cap.read()
+            if not ret:
+                print(f"End of video stream for {sid}, restarting.")
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0) # 비디오 루프
+                continue
+
+            processed_frame, detection_results = detector.process_frame(frame)
+            _, buffer = cv2.imencode('.jpg', processed_frame)
+            encoded_image = base64.b64encode(buffer).decode('utf-8')
+            
+            socketio.emit('response', {
+                'image': 'data:image/jpeg;base64,' + encoded_image,
+                'detections': detection_results
+            }, namespace='/ws/damage_feed', room=sid)
+            socketio.sleep(0.03) # ~33 FPS
+    except Exception as e:
+        print(f'Exiting damage detection thread for {sid} due to error: {e}')
+    finally:
+        cap.release()
+        print(f"Released video capture for {sid}")
+
 @socketio.on('connect', namespace='/ws/damage_feed')
 def connect_damage_feed():
     sid = request.sid
     print(f'Client connected to damage feed: {sid}')
-    damage_detectors[sid] = DamageDetector(yolo_model_path='./yolov8n.pt')
-    print(f"Created new DamageDetector for session {sid}")
+    if sid in video_threads:
+        video_threads[sid].set()
+
+    stop_event = Event()
+    video_threads[sid] = stop_event
+
+    video_path = './uploads/C_3_8_1_BU_SMA_09-17_13-38-51_CA_RGB_DF2_M1.mp4'
+    socketio.start_background_task(target=damage_video_processing_thread, video_path=video_path, sid=sid, stop_event=stop_event)
 
 @socketio.on('disconnect', namespace='/ws/damage_feed')
 def disconnect_damage_feed():
     sid = request.sid
-    if sid in damage_detectors:
-        del damage_detectors[sid]
-        print(f"Removed DamageDetector for session {sid}")
     print(f'Client disconnected from damage feed: {sid}')
-
-@socketio.on('message', namespace='/ws/damage_feed')
-def handle_damage_message(data):
-    global is_damage_processing
-    if is_damage_processing:
-        return
-    is_damage_processing = True
-    try:
-        sid = request.sid
-        if sid not in damage_detectors:
-            return
-        if data.startswith('data:image/jpeg;base64,'):
-            base64_image = data.split(',')[1]
-            image_bytes = base64.b64decode(base64_image)
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            if frame is not None:
-                detector = damage_detectors[sid]
-                processed_frame, detection_results = detector.process_frame(frame)
-                _, buffer = cv2.imencode('.jpg', processed_frame)
-                encoded_image = base64.b64encode(buffer).decode('utf-8')
-                emit('response', {
-                    'image': 'data:image/jpeg;base64,' + encoded_image,
-                    'detections': detection_results
-                }, namespace='/ws/damage_feed')
-    except Exception as e:
-        print(f'Error processing damage frame for session {request.sid}: {e}')
-    finally:
-        is_damage_processing = False
+    if sid in video_threads:
+        video_threads[sid].set()
+        del video_threads[sid]
+        print(f"Stopped video thread for {sid}")
 
 with app.app_context():
    initialize_database()
