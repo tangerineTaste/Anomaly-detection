@@ -19,7 +19,7 @@ from endpoints.auth.helpers import revoke_token, is_token_revoked
 from endpoints import Foresight_API
 # Importing the extensions
 from extensions import db, jwt
-from models import Roles
+from models import Roles, Incidents
 from models.camera import CameraDetails
 from flask_migrate import Migrate # Flask-Migrate 임포트
 
@@ -28,6 +28,8 @@ from smoking_model import load_smoking_model, process_frame_for_smoking
 import mediapipe as mp
 from abandon import AbandonedItemDetector
 from Damage import DamageDetector
+from Violence import ViolenceDetector
+from Weak import WeakDetector
 
 # --- 모델 전역 로드 ---
 yolo_model = YOLO('./yolov8n.pt') # YOLO 모델을 앱 시작 시 한 번만 로드합니다.
@@ -65,7 +67,11 @@ damage_detectors = {}
 is_processing = False # 흡연 처리 중인지 확인하는 플래그
 is_abandon_processing = False # 유기물 처리 중인지 확인하는 플래그
 is_damage_processing = False # 폭행 처리 중인지 확인하는 플래그
+import time
+
 video_threads = {} # 백그라운드 비디오 처리 스레드를 관리하기 위한 딕셔너리
+last_incident_time = {} # 인시던트 저장 쿨다운을 관리하기 위한 딕셔너리
+INCIDENT_SAVE_COOLDOWN = 10 # seconds
 
 
 @jwt.expired_token_loader
@@ -152,6 +158,26 @@ def smoking_video_processing_thread(video_path, sid, stop_event):
             _, buffer = cv2.imencode('.jpg', processed_frame)
             encoded_image = base64.b64encode(buffer).decode('utf-8')
             
+            # Save incident if smoking is detected, with cooldown
+            if "SMOKING" in prediction:
+                now = time.time()
+                last_saved_key = f"{sid}_smoking"
+                last_saved = last_incident_time.get(last_saved_key, 0)
+                if now - last_saved > INCIDENT_SAVE_COOLDOWN:
+                    with app.app_context():
+                        try:
+                            incident = Incidents(
+                                type="Smoking",
+                                module="SmokingDetector",
+                                camera="Camera 1", # Placeholder
+                                status="Active"
+                            )
+                            incident.save()
+                            last_incident_time[last_saved_key] = now
+                            print(f"Incident saved: Smoking detected by {sid}")
+                        except Exception as db_e:
+                            print(f"Error saving smoking incident to DB: {db_e}")
+
             socketio.emit('response', {'image': 'data:image/jpeg;base64,' + encoded_image, 'prediction': prediction}, namespace='/ws/video_feed', room=sid)
             socketio.sleep(0.03) # ~33 FPS
     except Exception as e:
@@ -206,6 +232,26 @@ def abandoned_video_processing_thread(video_path, sid, stop_event):
             _, buffer = cv2.imencode('.jpg', processed_frame)
             encoded_image = base64.b64encode(buffer).decode('utf-8')
             
+            # Save incident if abandoned item is detected, with cooldown
+            if detection_results and detection_results.get('abandoned_items'):
+                now = time.time()
+                last_saved_key = f"{sid}_abandoned"
+                last_saved = last_incident_time.get(last_saved_key, 0)
+                if now - last_saved > INCIDENT_SAVE_COOLDOWN:
+                    with app.app_context():
+                        try:
+                            incident = Incidents(
+                                type="Abandoned Item",
+                                module="AbandonedItemDetector",
+                                camera="Camera 1", # Placeholder
+                                status="Active"
+                            )
+                            incident.save()
+                            last_incident_time[last_saved_key] = now
+                            print(f"Incident saved: Abandoned item detected by {sid}")
+                        except Exception as db_e:
+                            print(f"Error saving abandoned item incident to DB: {db_e}")
+
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
                 'detections': detection_results
@@ -239,10 +285,10 @@ def disconnect_abandoned_feed():
         del video_threads[sid]
         print(f"Stopped video thread for {sid}")
 
-# --- 폭행 감지 웹소켓 핸들러 ---
-def damage_video_processing_thread(video_path, sid, stop_event):
-    """폭행 감지 비디오 처리를 위한 백그라운드 스레드"""
-    print(f"Starting damage detection thread for {sid} with video {video_path}")
+# --- 파손 감지 웹소켓 핸들러 ---
+def breakage_video_processing_thread(video_path, sid, stop_event):
+    """파손 감지 비디오 처리를 위한 백그라운드 스레드"""
+    print(f"Starting breakage detection thread for {sid} with video {video_path}")
     detector = DamageDetector(yolo_model_path='./yolov8n.pt')
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -261,21 +307,41 @@ def damage_video_processing_thread(video_path, sid, stop_event):
             _, buffer = cv2.imencode('.jpg', processed_frame)
             encoded_image = base64.b64encode(buffer).decode('utf-8')
             
+            # Save incident if damage is detected, with cooldown
+            if detection_results.get('is_danger'):
+                now = time.time()
+                last_saved_key = f"{sid}_damage"
+                last_saved = last_incident_time.get(last_saved_key, 0)
+                if now - last_saved > INCIDENT_SAVE_COOLDOWN:
+                    with app.app_context():
+                        try:
+                            incident = Incidents(
+                                type="Damage",
+                                module="DamageDetector",
+                                camera="Camera 1", # Placeholder
+                                status="Active"
+                            )
+                            incident.save()
+                            last_incident_time[last_saved_key] = now
+                            print(f"Incident saved: Damage detected by {sid}")
+                        except Exception as db_e:
+                            print(f"Error saving damage incident to DB: {db_e}")
+
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
                 'detections': detection_results
             }, namespace='/ws/damage_feed', room=sid)
             socketio.sleep(0.03) # ~33 FPS
     except Exception as e:
-        print(f'Exiting damage detection thread for {sid} due to error: {e}')
+        print(f'Exiting breakage detection thread for {sid} due to error: {e}')
     finally:
         cap.release()
         print(f"Released video capture for {sid}")
 
 @socketio.on('connect', namespace='/ws/damage_feed')
-def connect_damage_feed():
+def connect_breakage_feed():
     sid = request.sid
-    print(f'Client connected to damage feed: {sid}')
+    print(f'Client connected to breakage feed: {sid}')
     if sid in video_threads:
         video_threads[sid].set()
 
@@ -283,16 +349,167 @@ def connect_damage_feed():
     video_threads[sid] = stop_event
 
     video_path = './uploads/C_3_8_1_BU_SMA_09-17_13-38-51_CA_RGB_DF2_M1.mp4'
-    socketio.start_background_task(target=damage_video_processing_thread, video_path=video_path, sid=sid, stop_event=stop_event)
+    socketio.start_background_task(target=breakage_video_processing_thread, video_path=video_path, sid=sid, stop_event=stop_event)
 
 @socketio.on('disconnect', namespace='/ws/damage_feed')
-def disconnect_damage_feed():
+def disconnect_breakage_feed():
     sid = request.sid
-    print(f'Client disconnected from damage feed: {sid}')
+    print(f'Client disconnected from breakage feed: {sid}')
     if sid in video_threads:
         video_threads[sid].set()
         del video_threads[sid]
         print(f"Stopped video thread for {sid}")
+
+# --- 폭행 감지 웹소켓 핸들러 ---
+def violence_video_processing_thread(video_path, sid, stop_event):
+    """폭행 감지 비디오 처리를 위한 백그라운드 스레드"""
+    print(f"Starting violence detection thread for {sid} with video {video_path}")
+    detector = ViolenceDetector(yolo_model_path='./yolov8n.pt')
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error: Could not open video stream from {video_path}")
+        return
+
+    try:
+        while not stop_event.is_set():
+            ret, frame = cap.read()
+            if not ret:
+                print(f"End of video stream for {sid}, restarting.")
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0) # 비디오 루프
+                continue
+
+            processed_frame, detection_results = detector.process_frame(frame)
+            _, buffer = cv2.imencode('.jpg', processed_frame)
+            encoded_image = base64.b64encode(buffer).decode('utf-8')
+            
+            # Save incident if violence is detected, with cooldown
+            if detection_results.get('is_violence'):
+                now = time.time()
+                last_saved_key = f"{sid}_violence"
+                last_saved = last_incident_time.get(last_saved_key, 0)
+                if now - last_saved > INCIDENT_SAVE_COOLDOWN:
+                    with app.app_context():
+                        try:
+                            incident = Incidents(
+                                type="Violence",
+                                module="ViolenceDetector",
+                                camera="Camera 1", # Placeholder
+                                status="Active"
+                            )
+                            incident.save()
+                            last_incident_time[last_saved_key] = now
+                            print(f"Incident saved: Violence detected by {sid}")
+                        except Exception as db_e:
+                            print(f"Error saving violence incident to DB: {db_e}")
+
+            socketio.emit('response', {
+                'image': 'data:image/jpeg;base64,' + encoded_image,
+                'detections': detection_results
+            }, namespace='/ws/violence_feed', room=sid)
+            socketio.sleep(0.03) # ~33 FPS
+    except Exception as e:
+        print(f'Exiting violence detection thread for {sid} due to error: {e}')
+    finally:
+        cap.release()
+        print(f"Released video capture for {sid}")
+
+@socketio.on('connect', namespace='/ws/violence_feed')
+def connect_violence_feed():
+    sid = request.sid
+    print(f'Client connected to violence feed: {sid}')
+    if sid in video_threads:
+        video_threads[sid].set()
+
+    stop_event = Event()
+    video_threads[sid] = stop_event
+
+    video_path = './uploads/C_3_13_1_BU_SMA_08-28_14-30-29_CA_RGB_DF2_F1.mp4'
+    socketio.start_background_task(target=violence_video_processing_thread, video_path=video_path, sid=sid, stop_event=stop_event)
+
+@socketio.on('disconnect', namespace='/ws/violence_feed')
+def disconnect_violence_feed():
+    sid = request.sid
+    print(f'Client disconnected from violence feed: {sid}')
+    if sid in video_threads:
+        video_threads[sid].set()
+        del video_threads[sid]
+        print(f"Stopped video thread for {sid}")
+
+# --- 교통약자 감지 웹소켓 핸들러 ---
+def weak_video_processing_thread(video_path, sid, stop_event):
+    """교통약자 감지 비디오 처리를 위한 백그라운드 스레드"""
+    print(f"Starting weak detection thread for {sid} with video {video_path}")
+    detector = WeakDetector(yolo_model_path='./yolov8n.pt')
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error: Could not open video stream from {video_path}")
+        return
+
+    try:
+        while not stop_event.is_set():
+            ret, frame = cap.read()
+            if not ret:
+                print(f"End of video stream for {sid}, restarting.")
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0) # 비디오 루프
+                continue
+
+            processed_frame, detection_results = detector.process_frame(frame)
+            _, buffer = cv2.imencode('.jpg', processed_frame)
+            encoded_image = base64.b64encode(buffer).decode('utf-8')
+            
+            # Save incident if weak user is detected, with cooldown
+            if detection_results.get('is_weak'):
+                now = time.time()
+                last_saved_key = f"{sid}_weak"
+                last_saved = last_incident_time.get(last_saved_key, 0)
+                if now - last_saved > INCIDENT_SAVE_COOLDOWN:
+                    with app.app_context():
+                        try:
+                            incident = Incidents(
+                                type="Weak User",
+                                module="WeakDetector",
+                                camera="Camera 1", # Placeholder
+                                status="Active"
+                            )
+                            incident.save()
+                            last_incident_time[last_saved_key] = now
+                            print(f"Incident saved: Weak user detected by {sid}")
+                        except Exception as db_e:
+                            print(f"Error saving weak user incident to DB: {db_e}")
+
+            socketio.emit('response', {
+                'image': 'data:image/jpeg;base64,' + encoded_image,
+                'detections': detection_results
+            }, namespace='/ws/weak_feed', room=sid)
+            socketio.sleep(0.03) # ~33 FPS
+    except Exception as e:
+        print(f'Exiting weak detection thread for {sid} due to error: {e}')
+    finally:
+        cap.release()
+        print(f"Released video capture for {sid}")
+
+@socketio.on('connect', namespace='/ws/weak_feed')
+def connect_weak_feed():
+    sid = request.sid
+    print(f'Client connected to weak feed: {sid}')
+    if sid in video_threads:
+        video_threads[sid].set()
+
+    stop_event = Event()
+    video_threads[sid] = stop_event
+
+    video_path = './uploads/C_3_14_1_BU_DYB_10-11_14-46-58_CB_DF2_M2.mp4'
+    socketio.start_background_task(target=weak_video_processing_thread, video_path=video_path, sid=sid, stop_event=stop_event)
+
+@socketio.on('disconnect', namespace='/ws/weak_feed')
+def disconnect_weak_feed():
+    sid = request.sid
+    print(f'Client disconnected from weak feed: {sid}')
+    if sid in video_threads:
+        video_threads[sid].set()
+        del video_threads[sid]
+        print(f"Stopped video thread for {sid}")
+
 
 with app.app_context():
    initialize_database()

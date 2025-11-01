@@ -3,7 +3,7 @@ import numpy as np
 from ultralytics import YOLO
 from PIL import ImageFont, ImageDraw, Image
 
-class DamageDetector:
+class WeakDetector:
     def __init__(self, yolo_model_path, resize_width=720, min_person_conf=0.5, box_margin=20, flow_threshold=2.0, danger_pixels_min=50, consec_frames=2):
         self.model = YOLO(yolo_model_path)
         self.resize_width = resize_width
@@ -16,14 +16,14 @@ class DamageDetector:
 
         self.prev_gray = None
         self.danger_accum = 0
-        self.danger_frames = 0
+        self.weak_frames = 0
         self.total_frames = 0
 
         try:
             self.font_pil = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 26)
         except IOError:
             self.font_pil = ImageFont.load_default()
-            print("Arial 폰트를 찾을 수 없어 기본 폰트 사용")
+            print("Arial font not found. Using default.")
 
     def _initialize_dimensions(self, frame):
         h0, w0 = frame.shape[:2]
@@ -39,11 +39,10 @@ class DamageDetector:
 
         if self.prev_gray is None:
             self.prev_gray = gray.copy()
-            return frame_resized, {'is_danger': False, 'status_message': 'Initializing...'}
+            return frame_resized, {'is_weak': False, 'status_message': 'Initializing...'}
 
         self.total_frames += 1
 
-        # YOLO person detection
         results = self.model(frame_resized)
         person_mask = np.zeros((self.new_h, self.new_w), dtype=np.uint8)
 
@@ -58,37 +57,34 @@ class DamageDetector:
                 y2 = min(self.new_h, y2 + self.box_margin)
                 person_mask[y1:y2, x1:x2] = 255
 
-        # Optical Flow
         flow = cv.calcOpticalFlowFarneback(self.prev_gray, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
         mag, _ = cv.cartToPolar(flow[..., 0], flow[..., 1])
         mag_masked = mag * (person_mask / 255.0)
         danger_area = mag_masked > self.flow_threshold
         danger_pixels = np.sum(danger_area)
 
-        # Accumulate
         if danger_pixels > self.danger_pixels_min:
             self.danger_accum += 1
         else:
             self.danger_accum = max(0, self.danger_accum - 1)
 
-        is_danger = self.danger_accum >= self.consec_frames
+        is_weak = self.danger_accum >= self.consec_frames
         
         overlay = frame_resized.copy()
-        if is_danger:
-            overlay[danger_area] = [0, 0, 255]  # Red highlight
+        if is_weak:
+            overlay[danger_area] = [0, 0, 255]
             cv.addWeighted(overlay, 0.5, frame_resized, 0.5, 0, frame_resized)
-            self.danger_frames += 1
+            self.weak_frames += 1
 
-        # --- Draw stats on the frame ---
         img_pil = Image.fromarray(frame_resized)
         draw = ImageDraw.Draw(img_pil)
 
-        danger_ratio = (self.danger_frames / self.total_frames * 100) if self.total_frames > 0 else 0.0
+        danger_ratio = (self.weak_frames / self.total_frames * 100) if self.total_frames > 0 else 0.0
 
         texts = [
-            f"Ratio:{danger_ratio:5.1f}%",
-            f"Pixels:{danger_pixels:6d}",
-            f"Frames:{self.danger_accum:3d}"
+            f"Weak:{danger_ratio:5.1f}%",
+            f"Flow:{danger_pixels:6d}",
+            f"Active:{self.danger_accum:3d}"
         ]
         colors = [(255, 255, 0), (0, 255, 255), (255, 100, 100)]
 
@@ -98,7 +94,7 @@ class DamageDetector:
             try:
                 bbox = draw.textbbox((0, 0), t, font=self.font_pil)
                 w = bbox[2] - bbox[0]
-            except AttributeError: # fallback for older Pillow versions
+            except AttributeError:
                 w, _ = draw.textsize(t, font=self.font_pil)
             segment_widths.append(w)
             total_width += w + 30
@@ -124,8 +120,8 @@ class DamageDetector:
         self.prev_gray = gray.copy()
 
         detection_results = {
-            'is_danger': is_danger,
-            'status_message': f"Ratio:{danger_ratio:5.1f}% | Pixels:{danger_pixels:6d} | Frames:{self.danger_accum:3d}"
+            'is_weak': is_weak,
+            'status_message': f"Weak:{danger_ratio:5.1f}% | Flow:{danger_pixels:6d} | Active:{self.danger_accum:3d}"
         }
 
         return frame_resized, detection_results

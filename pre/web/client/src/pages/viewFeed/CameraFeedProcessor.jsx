@@ -7,29 +7,32 @@ const CameraFeedProcessor = () => {
   const [prediction, setPrediction] = useState('');
   const [abandonedDetectionResults, setAbandonedDetectionResults] = useState(null);
   const [damageDetectionResults, setDamageDetectionResults] = useState(null);
-  const [detectionMode, setDetectionMode] = useState('smoking'); // 'smoking', 'abandoned', or 'damage'
+  const [violenceDetectionResults, setViolenceDetectionResults] = useState(null);
+  const [weakDetectionResults, setWeakDetectionResults] = useState(null); // New state
+  const [detectionMode, setDetectionMode] = useState('smoking'); // 'smoking', 'abandoned', 'damage', 'violence', 'weak'
   const [isConnected, setIsConnected] = useState(false);
 
   const detectionEndpoints = {
     smoking: 'http://192.168.94.49:5000/ws/video_feed',
     abandoned: 'http://192.168.94.49:5000/ws/abandoned_feed',
     damage: 'http://192.168.94.49:5000/ws/damage_feed',
+    violence: 'http://192.168.94.49:5000/ws/violence_feed',
+    weak: 'http://192.168.94.49:5000/ws/weak_feed', // New endpoint
   };
 
   useEffect(() => {
-    // Clean up previous socket connection
     if (socketRef.current) {
       socketRef.current.disconnect();
     }
 
-    // Reset states when mode changes
     setProcessedFrame(null);
     setPrediction('');
     setAbandonedDetectionResults(null);
     setDamageDetectionResults(null);
+    setViolenceDetectionResults(null);
+    setWeakDetectionResults(null); // Reset new state
     setIsConnected(false);
 
-    // Establish new socket connection based on the detection mode
     const newSocket = io(detectionEndpoints[detectionMode], {
       transports: ['websocket'],
     });
@@ -54,6 +57,10 @@ const CameraFeedProcessor = () => {
         setAbandonedDetectionResults(data.detections);
       } else if (detectionMode === 'damage') {
         setDamageDetectionResults(data.detections);
+      } else if (detectionMode === 'violence') {
+        setViolenceDetectionResults(data.detections);
+      } else if (detectionMode === 'weak') { // New handler case
+        setWeakDetectionResults(data.detections);
       }
     });
 
@@ -62,16 +69,17 @@ const CameraFeedProcessor = () => {
       setIsConnected(false);
     });
 
-    // Cleanup on component unmount or when detectionMode changes
     return () => {
       newSocket.disconnect();
     };
-  }, [detectionMode]); // Re-run effect when detectionMode changes
+  }, [detectionMode]);
 
   const toggleDetectionMode = () => {
-    setDetectionMode(prevMode => {
+    setDetectionMode(prevMode => { // Updated logic for 5 modes
       if (prevMode === 'smoking') return 'abandoned';
       if (prevMode === 'abandoned') return 'damage';
+      if (prevMode === 'damage') return 'violence';
+      if (prevMode === 'violence') return 'weak';
       return 'smoking';
     });
   };
@@ -82,11 +90,22 @@ const CameraFeedProcessor = () => {
     }
   };
 
+  const getButtonText = () => {
+      switch(detectionMode) {
+          case 'smoking': return '흡연 감지';
+          case 'abandoned': return '유기물 감지';
+          case 'damage': return '파손 감지';
+          case 'violence': return '폭행 감지';
+          case 'weak': return '교통약자 감지';
+          default: return '모드 전환';
+      }
+  }
+
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', margin: '10px 0' }}>
         <button onClick={toggleDetectionMode} style={{ padding: '10px 20px', fontSize: '16px' }}>
-          모드 전환: {detectionMode === 'smoking' ? '흡연 감지' : detectionMode === 'abandoned' ? '유기물 감지' : '폭행 감지'}
+          모드 전환: {getButtonText()}
         </button>
         <button onClick={handleDisconnect} style={{ padding: '10px 20px', fontSize: '16px', backgroundColor: 'red', color: 'white' }}>
           Disconnect
@@ -115,7 +134,15 @@ const CameraFeedProcessor = () => {
         )}
         {detectionMode === 'damage' && damageDetectionResults && (
           damageDetectionResults.status_message ||
-          (damageDetectionResults.is_danger ? '폭행 감지됨!' : '폭행 없음')
+          (damageDetectionResults.is_danger ? '파손 감지됨!' : '파손 없음')
+        )}
+        {detectionMode === 'violence' && violenceDetectionResults && (
+          violenceDetectionResults.status_message ||
+          (violenceDetectionResults.is_violence ? '폭행 감지됨!' : '폭행 없음')
+        )}
+        {detectionMode === 'weak' && weakDetectionResults && ( // New display logic
+          weakDetectionResults.status_message ||
+          (weakDetectionResults.is_weak ? '교통약자 감지됨!' : '교통약자 없음')
         )}
       </h2>
     </>
