@@ -1,11 +1,15 @@
 from extensions import db
 from datetime import datetime
+import pytz
+
+def get_kst_time():
+    return datetime.now(pytz.timezone('Asia/Seoul'))
 
 class Incidents(db.Model):
     # Assuming 'incidents_id' to match the column name in your actual database
     incidents_id = db.Column(db.Integer, primary_key=True)
     notification_id = db.Column(db.Integer, db.ForeignKey('notifications.id'), nullable=True)  # This assumes your notifications table is named 'notifications'
-    date = db.Column(db.DateTime, default=datetime.utcnow)  # Defaults to the current time
+    date = db.Column(db.DateTime, default=get_kst_time)  # Defaults to the current time in KST
     type = db.Column(db.String(50), nullable=False)         # Must be provided (can't be NULL)
     module = db.Column(db.String(50), nullable=False)       # Must be provided (can't be NULL)
     camera = db.Column(db.String(100), nullable=False)      # Must be provided (can't be NULL)

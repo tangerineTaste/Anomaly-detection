@@ -13,11 +13,11 @@ const CameraFeedProcessor = () => {
   const [isConnected, setIsConnected] = useState(false);
 
   const detectionEndpoints = {
-    smoking: 'http://192.168.94.49:5000/ws/video_feed',
-    abandoned: 'http://192.168.94.49:5000/ws/abandoned_feed',
-    damage: 'http://192.168.94.49:5000/ws/damage_feed',
-    violence: 'http://192.168.94.49:5000/ws/violence_feed',
-    weak: 'http://192.168.94.49:5000/ws/weak_feed', // New endpoint
+    smoking: 'http://localhost:5000/ws/video_feed',
+    abandoned: 'http://localhost:5000/ws/abandoned_feed',
+    damage: 'http://localhost:5000/ws/damage_feed',
+    violence: 'http://localhost:5000/ws/violence_feed',
+    weak: 'http://localhost:5000/ws/weak_feed', // New endpoint
   };
 
   useEffect(() => {
