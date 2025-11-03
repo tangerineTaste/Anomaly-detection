@@ -8,7 +8,7 @@ import LineChart from "../../components/LineChart";
 
 const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
   // ✅ Flask API 경로
-  const API_URL = "http://192.168.94.49:5000/dashboard/stats";
+  const API_URL = "http://127.0.0.1:5000/dashboard/stats";
 
   // ✅ 통계 데이터 저장
   const [stats, setStats] = useState({
@@ -119,7 +119,7 @@ const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
                 boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
               }}
             >
-              <Typography sx={{ fontWeight: "bold", mb: 2 }}>
+              <Typography sx={{ fontWeight: "bold", mb: 2, fontSize: "16px" }}>
                 월별 이상행동 통계
               </Typography>
 
@@ -182,22 +182,31 @@ const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
             {/*</Box>*/}
 
             <Box sx={{ display: "flex", gap: 1 }}>
-              <Link to="/chatbot" style={{ textDecoration: "none" }}>
-                <Box
-                  sx={{
-                    background: "#fff",
-                    color: "#f56214",
-                    borderRadius: "10px",
-                    px: 2.5,
-                    py: 1,
-                    fontWeight: 600,
-                    padding: "12px 20px",
-                    cursor: "pointer",
+              <Link
+                  to="#"
+                  onClick={() => {
+                      const currentHost = window.location.hostname;
+                      // 팝업창으로 열기 (크기, 위치 지정 가능)
+                      window.open(
+                          `http://${currentHost}:8080/chat-app`,
+                          "_blank",
+                          "width=1000,height=800,left=200,top=100,menubar=no,toolbar=no,scrollbars=yes,resizable=yes"
+                      );
                   }}
+                  style={{textDecoration: "none"}}
+              >
+                <Box
+                    sx={{
+                        background: "rgba(255,255,255,0.2)",
+                        borderRadius: "10px",
+                        padding: "16px",
+                        textAlign: "center",
+                        cursor: "pointer",
+                    }}
                 >
-                  대화 시작하기
+                    대화 시작하기
                 </Box>
-              </Link>
+            </Link>
             </Box>
 
             <BsRobot
@@ -225,7 +234,7 @@ const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 {/*<BsFillCameraFill style={{ color: "#f56214", fontSize: "24px" }} />*/}
-                <Typography sx={{ fontWeight: "bold" }}>실시간 CCTV 피드</Typography>
+                <Typography sx={{ fontWeight: "bold", fontSize: "16px" }}>CCTV 보기</Typography>
               </Box>
               <Link to="/view_feed">
                 <IconButton>

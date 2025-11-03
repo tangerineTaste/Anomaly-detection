@@ -58,6 +58,14 @@ const Login = (props, { ...others }) => {
                 user: response.data.user,
               },
             });
+            localStorage.setItem(
+                "user",
+                JSON.stringify({
+                  username: response.data.user.username,
+                  role: response.data.Role?.name || response.data.Role, // 백엔드 Role이 dict일 수도 있음
+                  token: response.data.Access_token,
+                })
+              );
             if (scriptedRef.current) {
               setStatus({ success: true });
               setSubmitting(false);

@@ -141,37 +141,22 @@ const Topbar = () => {
         }}
       >
         {/* Left side - Logo */}
-        <Box display="flex" alignItems="center" gap={2}>
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: "12px",
-              background: "#f56214",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Typography
-              sx={{
-                color: "#ffffff",
-                fontWeight: "bold",
-                fontSize: "22px",
-              }}
-            >
-              S
-            </Typography>
-          </Box>
+        {/* ✅ Left side - Header style logo */}
+        <Box display="flex" alignItems="center">
           <Typography
-            variant="h5"
+            component={Link}
+            to="/main"                // ✅ 메인페이지로 이동
             sx={{
-              fontWeight: "bold",
-              color: colors.blackAccents[500],
-              fontSize: "22px",
+              fontFamily: "'GmarketSansBold', sans-serif",
+              fontSize: "26px",
+              fontWeight: 900,
+              color: "#f56214",
+              textDecoration: "none",
+              letterSpacing: "-0.05rem",
+              "&:hover": { opacity: 0.8 },
             }}
           >
-            SIGNAL
+            ON:SIGNAL
           </Typography>
         </Box>
 
@@ -465,7 +450,7 @@ const Topbar = () => {
               }}
             >
               <PersonIcon sx={{ mr: 2, color: colors.blueAccents[500] }} />
-              <Typography variant="body2" sx={{ fontFamily: "'NanumSquare', sans-serif" }}>My Profile</Typography>
+              <Typography variant="body2" sx={{ fontFamily: "'NanumSquare', sans-serif", fontSize: "16px" }}>My Profile</Typography>
             </MenuItem>
             <MenuItem
               onClick={handleLogout}
@@ -478,7 +463,7 @@ const Topbar = () => {
               }}
             >
               <ExitToAppOutlinedIcon sx={{ mr: 2, color: colors.orangeAccents[500] }} />
-              <Typography variant="body2" sx={{ fontFamily: "'NanumSquare', sans-serif" }}>Logout</Typography>
+              <Typography variant="body2" sx={{ fontFamily: "'NanumSquare', sans-serif", fontSize: "16px" }}>Logout</Typography>
             </MenuItem>
           </Menu>
         </Box>

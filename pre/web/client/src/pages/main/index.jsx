@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Header from "../../components/header/Header";
 import Footer from "../../components/footer/Footer";
 import { Button, Box } from "@mui/material";
@@ -6,6 +6,22 @@ import "./Main.css";
 
 export default function Main() {
   const [index, setIndex] = useState(0);
+  const stepRefs = useRef([]);
+
+  // ✅ Intersection Observer 등록
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) entry.target.classList.add("active");
+        });
+      },
+      { threshold: 0.2 }
+    );
+
+    stepRefs.current.forEach((ref) => ref && observer.observe(ref));
+    return () => observer.disconnect();
+  }, []);
 
   const cards = [
   {
@@ -66,6 +82,33 @@ export default function Main() {
   },
 ];
 
+  const [stackTab, setStackTab] = useState("backend");
+
+    const stacks = {
+      backend: [
+        { name: "Python", src: `${process.env.PUBLIC_URL}/assets/logos/python.svg` },
+        { name: "FastAPI", src: `${process.env.PUBLIC_URL}/assets/logos/fastapi.svg` },
+        { name: "Flask", src: `${process.env.PUBLIC_URL}/assets/logos/flask-original.svg` },
+        { name: "PostgreSQL", src: `${process.env.PUBLIC_URL}/assets/logos/postgresql.svg` },
+        { name: "SQLAlchemy", src: `${process.env.PUBLIC_URL}/assets/logos/sqlalchemy.svg` },
+        { name: "Docker", src: `${process.env.PUBLIC_URL}/assets/logos/docker.svg` },
+        { name: "Python", src: `${process.env.PUBLIC_URL}/assets/logos/python.svg` },
+        { name: "FastAPI", src: `${process.env.PUBLIC_URL}/assets/logos/fastapi.svg` },
+        { name: "Flask", src: `${process.env.PUBLIC_URL}/assets/logos/flask-original.svg` },
+        { name: "PostgreSQL", src: `${process.env.PUBLIC_URL}/assets/logos/postgresql.svg` },
+        { name: "SQLAlchemy", src: `${process.env.PUBLIC_URL}/assets/logos/sqlalchemy.svg` },
+        { name: "Docker", src: `${process.env.PUBLIC_URL}/assets/logos/docker.svg` },
+      ],
+      frontend: [
+        { name: "React", src: `${process.env.PUBLIC_URL}/assets/logos/react.svg` },
+        { name: "Vite", src: `${process.env.PUBLIC_URL}/assets/logos/vite.svg` },
+        { name: "MUI", src: `${process.env.PUBLIC_URL}/assets/logos/mui.svg` },
+        { name: "TailwindCSS", src: `${process.env.PUBLIC_URL}/assets/logos/tailwind.svg` },
+        { name: "Redux", src: `${process.env.PUBLIC_URL}/assets/logos/redux.svg` },
+        { name: "Axios", src: `${process.env.PUBLIC_URL}/assets/logos/axios.svg` },
+      ],
+    };
+
 
   const handlePrev = () => {
     setIndex((prev) => (prev > 0 ? prev - 1 : 0));
@@ -108,7 +151,7 @@ export default function Main() {
                 sx={{
                   backgroundColor: "#f56214 !important",
                   color: "#fff !important",
-                  borderRadius: "12px",
+                  borderRadius: "50px",
                   padding: "12px 36px",
                   fontSize: "16px",
                   fontWeight: "700",
@@ -182,21 +225,20 @@ export default function Main() {
             <section className="section platform">
               <div className="container">
                 <h2 className="platform__title">
-                  <b>실시간 감지</b>부터 <b>이상행동 분석</b>까지,<br /><b>모든 과정을 한눈</b>에 확인하세요.
+                  <b>실시간 감지</b>부터 <b>이상행동 분석</b>까지,<br /><b>모든 과정</b>을 한눈에 확인하세요.
                 </h2>
                 <p className="platform__subtitle">
                   AI 기반 CCTV 분석 플랫폼이 매장 내 모든 상황을 실시간으로 인식하고 기록합니다.
                 </p>
 
                 {/* STEP 1 */}
-                <div className="platform__step">
+                <div className="platform__step" ref={(el) => (stepRefs.current[0] = el)}>
                   <div className="platform__text">
-                    <span className="platform__step-label">STEP 1</span>
-                    <h3 className="platform__step-title">CCTV 영상 등록</h3>
+                    <span className="platform__step-label">STEP 1. CCTV 영상 등록</span>
                     <h4 className="platform__headline">설치된 CCTV만 등록하면<br />AI 분석 준비 완료</h4>
                     <p className="platform__desc">
-                      복잡한 설정 없이 기존 CCTV 영상을 등록하면,<br />
-                      AI가 자동으로 영상 피드를 분석 환경에 연결합니다.<br />
+                      복잡한 설정 없이 기존 CCTV 영상을 등록하면,
+                      AI가 자동으로 영상 피드를 분석 환경에 연결합니다.
                       매장별 카메라를 손쉽게 관리하고, 실시간 데이터를 받아볼 수 있습니다.
                     </p>
                   </div>
@@ -206,36 +248,80 @@ export default function Main() {
                 </div>
 
                 {/* STEP 2 */}
-                    <div className="platform__step reverse">
-                      <div className="platform__image">
-                        <img src={`${process.env.PUBLIC_URL}/assets/main_bg.jpg`} alt="AI 감지" />
-                      </div>
-                      <div className="platform__text">
-                        <span className="platform__step-label">STEP 2</span>
-                        <h3 className="platform__step-title">AI 감지 및 분석</h3>
-                        <h4 className="platform__headline">AI가 이상행동을 감지하고<br />즉시 관리자에게 알림</h4>
-                        <p className="platform__desc">
-                          전도, 폭행, 방화 등 이상행동을 실시간으로 탐지하여<br />
-                          관리자 화면과 알림 시스템을 통해 즉시 전송합니다.<br />
-                          인식된 데이터는 자동 저장되어 통계와 분석에 활용됩니다.
-                        </p>
-                      </div>
-                    </div>
+                <div className="platform__step" ref={(el) => (stepRefs.current[1] = el)}>
+                  <div className="platform__image">
+                    <img src={`${process.env.PUBLIC_URL}/assets/main_bg.jpg`} alt="AI 감지" />
+                  </div>
+                  <div className="platform__text">
+                    <span className="platform__step-label">STEP 2. AI 감지 및 분석</span>
+                    <h4 className="platform__headline">AI가 이상행동을 감지하고<br />즉시 관리자에게 알림</h4>
+                    <p className="platform__desc">
+                      전도, 폭행, 방화 등 이상행동을 실시간으로 탐지하여
+                      관리자 화면과 알림 시스템을 통해 즉시 전송합니다.
+                      인식된 데이터는 자동 저장되어 통계와 분석에 활용됩니다.
+                    </p>
+                  </div>
+                </div>
 
                 {/* STEP 3 */}
-                <div className="platform__step">
+                <div className="platform__step" ref={(el) => (stepRefs.current[2] = el)}>
                   <div className="platform__text">
-                    <span className="platform__step-label">STEP 3</span>
-                    <h3 className="platform__step-title">이상행동 리포트</h3>
+                    <span className="platform__step-label">STEP 3. 이상행동 리포트</span>
                     <h4 className="platform__headline">데이터 기반의<br />통계 리포트 자동 생성</h4>
                     <p className="platform__desc">
-                      감지된 이상행동 데이터를 바탕으로 주간·월간 통계 리포트를 자동 생성합니다.<br />
-                      관리자 페이지에서 그래프와 지표로 확인 가능하며,<br />
+                      감지된 이상행동 데이터를 바탕으로 주간·월간 통계 리포트를 자동 생성합니다.
+                      관리자 페이지에서 그래프와 지표로 확인 가능하며,
                       이를 통해 효율적인 매장 관리와 사고 예방이 가능합니다.
                     </p>
                   </div>
                   <div className="platform__image">
                     <img src={`${process.env.PUBLIC_URL}/assets/main_bg.jpg`} alt="리포트 분석" />
+                  </div>
+                </div>
+              </div>
+              <div className="rolling-text" aria-hidden="true">
+                  <div className="rolling-track">
+                    <span>OBSERVE · DETECT · ALERT · ANALYZE · EVOLVE ·</span>
+                    <span>OBSERVE · DETECT · ALERT · ANALYZE · EVOLVE ·</span>
+                  </div>
+                </div>
+            </section>
+
+            {/* ✅ Tech Stack / Partners-like Section */}
+            <section className="section stack">
+              <div className="container">
+                <h2 className="stack__title">
+                  <b>백엔드</b>부터 <b>프론트엔드</b>까지,<br /><b>사용 기술</b>을 한눈에 확인하세요.
+                </h2>
+                <p className="stack__subtitle">
+                  프로젝트에 사용한 핵심 기술 스택을 한눈에 확인하세요.
+                </p>
+
+                {/* 탭 버튼 */}
+                <div className="stack__tabs">
+                  <button
+                    className={`stack__tab ${stackTab === "backend" ? "is-active" : ""}`}
+                    onClick={() => setStackTab("backend")}
+                  >
+                    백엔드
+                  </button>
+                  <button
+                    className={`stack__tab ${stackTab === "frontend" ? "is-active" : ""}`}
+                    onClick={() => setStackTab("frontend")}
+                  >
+                    프론트엔드
+                  </button>
+                </div>
+
+                {/* 로고 그리드 카드 */}
+                <div className="stack__card">
+                  <div className="stack__grid">
+                    {stacks[stackTab].map((it) => (
+                      <div key={it.name} className="stack__item" title={it.name}>
+                        <img src={it.src} alt={it.name} />
+                        <span>{it.name}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

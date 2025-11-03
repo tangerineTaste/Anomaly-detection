@@ -16,8 +16,6 @@ import { Typography } from "@mui/material";
 import { useState } from "react";
 import { useSelector } from "react-redux";
 
-import { Modal, Button } from "@mui/material";
-
 // Custom toolbar for the data grid
 function CustomToolbar({ setFilterButtonEl }) {
   return (
@@ -101,21 +99,13 @@ const Incidents = () => {
   // const allIncidents = [...mockDataIncidents, ...approvedIncidents];
 
   // Columns configuration for the data grid
-  const [selectedIncident, setSelectedIncident] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleViewClick = (incident) => {
-    setSelectedIncident(incident);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedIncident(null);
-  };
-
   const columns = [
-
+    {
+      field: "id",
+      headerName: "ID",
+      disableColumnMenu: true,
+      cellClassName: "name-column--cell",
+    },
     {
       field: "date",
       headerName: "Date/Time",
@@ -133,7 +123,26 @@ const Incidents = () => {
       cellClassName: "name-column--cell",
     },
 
-
+    {
+      field: "module",
+      headerName: "Module",
+      renderCell: (params) => (
+        <div style={{ display: "flex", alignItems: "center" }}>
+          {params.value}
+          {params.value === "Fire Detection" && (
+            <AiFillFire style={{ marginLeft: "4px", color: "#FFB133" }}>
+              fire
+            </AiFillFire>
+          )}
+          {params.value === "Weapon Detection" && (
+            <FaGun style={{ marginLeft: "4px", color: "#FFB133" }}>fire</FaGun>
+          )}
+        </div>
+      ),
+      flex: 1,
+      disableColumnMenu: true,
+      cellClassName: "name-column--cell",
+    },
     {
       field: "camera",
       headerName: "Camera Location",
@@ -163,24 +172,6 @@ const Incidents = () => {
       flex: 1,
       disableColumnMenu: true,
       cellClassName: "name-column--cell",
-    },
-    {
-      field: "actions",
-      headerName: "Actions",
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => (
-        <Button
-          variant="contained"
-          color="primary"
-          size="small"
-          onClick={() => handleViewClick(params.row)}
-        >
-          View
-        </Button>
-      ),
-      flex: 0.5,
-      disableColumnMenu: true,
     },
   ];
   return (
@@ -247,60 +238,6 @@ const Incidents = () => {
           }}
         />
       </Box>
-
-      {selectedIncident && (
-        <Modal
-          open={isModalOpen}
-          onClose={handleCloseModal}
-          aria-labelledby="incident-details-title"
-        >
-          <Box
-            sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: 400,
-              bgcolor: 'background.paper',
-              border: '2px solid #000',
-              boxShadow: 24,
-              p: 4,
-            }}
-          >
-            <Typography id="incident-details-title" variant="h6" component="h2">
-              Incident Details
-            </Typography>
-            {selectedIncident.image_path && (
-              <img
-                src={`http://127.0.0.1:5000/${selectedIncident.image_path}`}
-                alt="Incident"
-                style={{ width: '100%', marginTop: '16px' }}
-              />
-            )}
-            <Typography sx={{ mt: 2 }}>
-              <strong>ID:</strong> {selectedIncident.id}
-            </Typography>
-            <Typography>
-              <strong>Date:</strong> {selectedIncident.date}
-            </Typography>
-            <Typography>
-              <strong>Type:</strong> {selectedIncident.type}
-            </Typography>
-            <Typography>
-              <strong>Module:</strong> {selectedIncident.module}
-            </Typography>
-            <Typography>
-              <strong>Camera:</strong> {selectedIncident.camera}
-            </Typography>
-            <Typography>
-              <strong>Status:</strong> {selectedIncident.status}
-            </Typography>
-            <Button onClick={handleCloseModal} sx={{ mt: 2 }}>
-              Close
-            </Button>
-          </Box>
-        </Modal>
-      )}
     </Box>
   );
 };

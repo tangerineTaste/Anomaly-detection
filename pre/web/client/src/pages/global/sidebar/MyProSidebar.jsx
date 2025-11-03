@@ -81,6 +81,9 @@ const MyProSidebar = () => {
   const history = useHistory();
   const location = useLocation();
 
+  const user = JSON.parse(localStorage.getItem("user")) || {};
+  const role = user.role || "User";
+
   // ✅ 경로 기반으로 메뉴 상태 자동 설정
   const getInitialMenu = (path) => {
     if (path === "/dashboard" || path === "/") return "Dashboard";
@@ -161,18 +164,20 @@ const MyProSidebar = () => {
               />
 
               {/* 카메라 등록/수정 */}
-              <Item
-                title="카메라 등록/수정"
-                to="/settings/camsetting"
-                icon={<MdOutlineNotificationAdd style={{ fontSize: 20 }} />}
-                selected={selected}
-                setSelected={setSelected}
-              />
+              (
+                  <Item
+                    title="카메라 등록/수정"
+                    to="/settings/camsetting"
+                    icon={<MdOutlineNotificationAdd style={{ fontSize: 20 }} />}
+                    selected={selected}
+                    setSelected={setSelected}
+                  />
+                )}
 
               {/* CCTV 보기 */}
               <Item
                 title="CCTV 보기"
-                to="/notifications"
+                to="/view_feed"
                 icon={<MdOutlineNotificationAdd style={{ fontSize: 20 }} />}
                 selected={selected}
                 setSelected={setSelected}
@@ -187,28 +192,28 @@ const MyProSidebar = () => {
                 setSelected={setSelected}
               />
 
-              {/* ===== INFORMATION ===== */}
-              <Typography
-                sx={{
-                  padding: "12px 24px 4px 24px",
-                  fontSize: "14px",
-                  fontWeight: "700",
-                  color: "#1c1c1c",
-                  textTransform: "uppercase",
-                  letterSpacing: "1px",
-                }}
-              >
-                INFORMATION
-              </Typography>
+              {/*/!* ===== INFORMATION ===== *!/*/}
+              {/*<Typography*/}
+              {/*  sx={{*/}
+              {/*    padding: "12px 24px 4px 24px",*/}
+              {/*    fontSize: "14px",*/}
+              {/*    fontWeight: "700",*/}
+              {/*    color: "#1c1c1c",*/}
+              {/*    textTransform: "uppercase",*/}
+              {/*    letterSpacing: "1px",*/}
+              {/*  }}*/}
+              {/*>*/}
+              {/*  INFORMATION*/}
+              {/*</Typography>*/}
 
-              {/* 상가 등록 */}
-              <Item
-                title="상가 등록/수정"
-                to="/faq"
-                icon={<AiOutlineQuestionCircle style={{ fontSize: 20 }} />}
-                selected={selected}
-                setSelected={setSelected}
-              />
+              {/*/!* 상가 등록 *!/*/}
+              {/*<Item*/}
+              {/*  title="상가 등록/수정"*/}
+              {/*  to="/faq"*/}
+              {/*  icon={<AiOutlineQuestionCircle style={{ fontSize: 20 }} />}*/}
+              {/*  selected={selected}*/}
+              {/*  setSelected={setSelected}*/}
+              {/*/>*/}
 
               {/*/!* 상가 수정 *!/*/}
               {/*<Item*/}

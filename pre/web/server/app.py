@@ -24,15 +24,15 @@ from models.camera import CameraDetails
 from flask_migrate import Migrate # Flask-Migrate 임포트
 
 from collections import deque
-from smoking_model import load_smoking_model, process_frame_for_smoking
+from ai.smoking_model import load_smoking_model, process_frame_for_smoking
 import mediapipe as mp
-from abandon import AbandonedItemDetector
-from Damage import DamageDetector
-from Violence import ViolenceDetector
-from Weak import WeakDetector
+from ai.abandon import AbandonedItemDetector
+from ai.Damage import DamageDetector
+from ai.Violence import ViolenceDetector
+from ai.Weak import WeakDetector
 
 # --- 모델 전역 로드 ---
-yolo_model = YOLO('./yolov8n.pt') # YOLO 모델을 앱 시작 시 한 번만 로드합니다.
+yolo_model = YOLO('./ai/yolov8n.pt') # YOLO 모델을 앱 시작 시 한 번만 로드합니다.
 
 # Creating the Flask app instance
 app = Flask(__name__)
@@ -295,7 +295,7 @@ def disconnect_abandoned_feed():
 def breakage_video_processing_thread(video_path, sid, stop_event):
     """파손 감지 비디오 처리를 위한 백그라운드 스레드"""
     print(f"Starting breakage detection thread for {sid} with video {video_path}")
-    detector = DamageDetector(yolo_model_path='./yolov8n.pt')
+    detector = DamageDetector(yolo_model_path='./ai/yolov8n.pt')
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print(f"Error: Could not open video stream from {video_path}")
@@ -354,7 +354,7 @@ def disconnect_breakage_feed():
 def violence_video_processing_thread(video_path, sid, stop_event):
     """폭행 감지 비디오 처리를 위한 백그라운드 스레드"""
     print(f"Starting violence detection thread for {sid} with video {video_path}")
-    detector = ViolenceDetector(yolo_model_path='./yolov8n.pt')
+    detector = ViolenceDetector(yolo_model_path='./ai/yolov8n.pt')
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print(f"Error: Could not open video stream from {video_path}")
@@ -413,7 +413,7 @@ def disconnect_violence_feed():
 def weak_video_processing_thread(video_path, sid, stop_event):
     """교통약자 감지 비디오 처리를 위한 백그라운드 스레드"""
     print(f"Starting weak detection thread for {sid} with video {video_path}")
-    detector = WeakDetector(yolo_model_path='./yolov8n.pt')
+    detector = WeakDetector(yolo_model_path='./ai/yolov8n.pt')
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print(f"Error: Could not open video stream from {video_path}")
