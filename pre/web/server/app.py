@@ -1,7 +1,7 @@
 import json
 import time
 import os
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_socketio import SocketIO, emit
 import base64
 import cv2
@@ -37,6 +37,11 @@ yolo_model = YOLO('./yolov8n.pt') # YOLO 모델을 앱 시작 시 한 번만 로
 # Creating the Flask app instance
 app = Flask(__name__)
 
+# --- 인시던트 이미지 제공 라우트 ---
+@app.route('/incident_images/<path:filename>')
+def serve_incident_image(filename):
+    return send_from_directory(os.path.join(app.root_path, 'incident_images'), filename)
+
 # Loading configuration from BaseConfig class in the config module
 app.config.from_object('config.BaseConfig')
 app.config['SECRET_KEY'] = 'key'
@@ -70,23 +75,32 @@ is_damage_processing = False # 폭행 처리 중인지 확인하는 플래그
 
 
 # --- 인시던트 저장 헬퍼 함수 ---
-def save_incident_if_needed(sid, incident_type, module_name):
-    """쿨다운을 확인하고 데이터베이스에 인시던트를 저장합니다."""
+def save_incident_if_needed(sid, incident_type, module_name, frame):
+    """쿨다운을 확인하고 데이터베이스에 인시던트를 저장하고, 필요한 경우 이미지도 저장합니다."""
     now = time.time()
     last_saved_key = f"{sid}_{incident_type.lower().replace(' ', '_')}"
     last_saved = last_incident_time.get(last_saved_key, 0)
     if now - last_saved > INCIDENT_SAVE_COOLDOWN:
         with app.app_context():
             try:
+                # 이미지 저장
+                image_filename = f"{incident_type.lower().replace(' ', '_')}_{int(now)}.jpg"
+                image_path_relative = os.path.join('incident_images', image_filename)
+                image_path_relative = image_path_relative.replace('\\', '/')
+                full_image_path = os.path.join(app.root_path, image_path_relative)
+                cv2.imwrite(full_image_path, frame)
+
+                # 데이터베이스에 인시던트 저장
                 incident = Incidents(
                     type=incident_type,
                     module=module_name,
-                    camera="Camera 1", # Placeholder
-                    status="Active"
+                    camera="Camera 1",  # Placeholder
+                    status="Active",
+                    image_path=image_path_relative
                 )
                 incident.save()
                 last_incident_time[last_saved_key] = now
-                print(f"Incident saved: {incident_type} detected by {sid}")
+                print(f"Incident saved: {incident_type} detected by {sid} with image {image_path_relative}")
             except Exception as db_e:
                 print(f"Error saving {incident_type} incident to DB: {db_e}")
 
@@ -95,7 +109,7 @@ import time
 
 video_threads = {} # 백그라운드 비디오 처리 스레드를 관리하기 위한 딕셔너리
 last_incident_time = {} # 인시던트 저장 쿨다운을 관리하기 위한 딕셔너리
-INCIDENT_SAVE_COOLDOWN = 10 # seconds
+INCIDENT_SAVE_COOLDOWN = 30 # seconds
 
 
 @jwt.expired_token_loader
@@ -184,7 +198,7 @@ def smoking_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if smoking is detected, with cooldown
             if "SMOKING" in prediction:
-                save_incident_if_needed(sid, "Smoking", "SmokingDetector")
+                save_incident_if_needed(sid, "Smoking", "SmokingDetector", processed_frame)
 
             socketio.emit('response', {'image': 'data:image/jpeg;base64,' + encoded_image, 'prediction': prediction}, namespace='/ws/video_feed', room=sid)
             socketio.sleep(0.03) # ~33 FPS
@@ -242,7 +256,7 @@ def abandoned_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if abandoned item is detected, with cooldown
             if detection_results and detection_results.get('abandoned_items'):
-                save_incident_if_needed(sid, "Abandoned Item", "AbandonedItemDetector")
+                save_incident_if_needed(sid, "Abandoned Item", "AbandonedItemDetector", processed_frame)
 
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
@@ -301,7 +315,7 @@ def breakage_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if damage is detected, with cooldown
             if detection_results.get('is_danger'):
-                save_incident_if_needed(sid, "Damage", "DamageDetector")
+                save_incident_if_needed(sid, "Damage", "DamageDetector", processed_frame)
 
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
@@ -360,7 +374,7 @@ def violence_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if violence is detected, with cooldown
             if detection_results.get('is_violence'):
-                save_incident_if_needed(sid, "Violence", "ViolenceDetector")
+                save_incident_if_needed(sid, "Violence", "ViolenceDetector", processed_frame)
 
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
@@ -419,7 +433,7 @@ def weak_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if weak user is detected, with cooldown
             if detection_results.get('is_weak'):
-                save_incident_if_needed(sid, "Weak User", "WeakDetector")
+                save_incident_if_needed(sid, "Weak User", "WeakDetector", processed_frame)
 
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,

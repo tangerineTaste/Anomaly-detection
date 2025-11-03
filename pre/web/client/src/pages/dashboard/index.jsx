@@ -8,7 +8,7 @@ import LineChart from "../../components/LineChart";
 
 const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
   // ✅ Flask API 경로
-  const API_URL = "http://127.0.0.1:5000/dashboard/stats";
+  const API_URL = "http://192.168.94.49:5000/dashboard/stats";
 
   // ✅ 통계 데이터 저장
   const [stats, setStats] = useState({

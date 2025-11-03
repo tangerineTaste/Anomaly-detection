@@ -10,6 +10,7 @@ class Incidents(db.Model):
     module = db.Column(db.String(50), nullable=False)       # Must be provided (can't be NULL)
     camera = db.Column(db.String(100), nullable=False)      # Must be provided (can't be NULL)
     status = db.Column(db.String(50), nullable=False)       # Must be provided (can't be NULL)
+    image_path = db.Column(db.String(255), nullable=True)    # Path to the incident image
 
     # define a relationship between Incidents and Notifications
     notification = db.relationship('Notifications', backref=db.backref('incidents', lazy=True))
@@ -35,7 +36,8 @@ class Incidents(db.Model):
             'type': self.type,
             'module': self.module,
             'camera': self.camera,
-            'status': self.status
+            'status': self.status,
+            'image_path': self.image_path
         }
 
     @classmethod

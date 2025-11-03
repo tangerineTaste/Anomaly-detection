@@ -1,19 +1,19 @@
-version: '3.8' # Docker Compose 버전
-
+version: '3.8'
 services:
-  # 1. 백엔드 서비스 정의
-  backend:
-    build: ./server  # ./server 폴더의 Dockerfile을 사용
-    image: simjoso/my-project-server:latest
-    ports:
-      - "5000:5000"  # PC 5000번 포트와 컨테이너 5000번 포트를 연결
-
-
-  # 2. 프론트엔드 서비스 정의
   frontend:
-    build: ./client # ./client 폴더의 Dockerfile을 사용
-    image: simjoso/my-project-client:latest
+    build:
+      context: ./client
+      dockerfile: Dockerfile.frontend
     ports:
-      - "3000:80"    # PC 3000번 포트와 컨테이너 80번 포트(Nginx)를 연결
-    depends_on:
-      - backend      # 백엔드가 먼저 실행되도록 설정 (필수는 아님)
+      - "3000:80"  # 호스트 3000 → 컨테이너 80
+    environment:
+      - REACT_APP_API_URL=http://host.docker.internal:5000
+      - REACT_APP_RTSP_URL=ws://host.docker.internal:5001
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # WSL 호스트 매핑 (Docker Desktop)
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
