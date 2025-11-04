@@ -68,6 +68,39 @@ jwt.init_app(app)
 CORS(app)
 
 
+# --- 대시보드 통계 API ---
+@app.route('/dashboard/stats', methods=['GET'])
+def get_dashboard_stats():
+    """
+    대시보드에 필요한 통계 데이터를 반환합니다.
+    - 오늘 발생한 이상행동 수
+    - 검증 완료된 이벤트 수
+    - AI 오탐지율 (현재는 더미 데이터)
+    - 실시간 대응 중인 이벤트 수
+    - 전체 카메라 수
+    """
+    from datetime import datetime, date
+
+    today = date.today()
+    start_of_day = datetime.combine(today, datetime.min.time())
+    end_of_day = datetime.combine(today, datetime.max.time())
+
+    # 오늘 발생한 이상행동 수
+    today_incidents = Incidents.query.filter(Incidents.date.between(start_of_day, end_of_day)).count()
+
+    # 전체 카메라 수
+    total_cameras = CameraDetails.query.count()
+
+    stats = {
+        "today_incidents": today_incidents,
+        "verified_events": 0,
+        "ai_false_rate": 0.12, 
+        "active_events": 0,
+        "total_cameras": total_cameras,
+        # "monthly_data": monthly_data
+    }
+    return jsonify(stats)
+
 # --- 대시보드 이상행동 감지 웹소켓 핸들러 ---
 video_list = [
     './uploads/C_3_13_1_BU_SMA_08-28_14-30-29_CA_RGB_DF2_F1.mp4',

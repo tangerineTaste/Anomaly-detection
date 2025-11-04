@@ -160,9 +160,9 @@ class AbnormalBehaviorDetector:
             print("[OK] 한글 폰트 로드")
         except:
             try:
-                self.font_large = ImageFont.truetype("C:/Windows/Fonts/malgun.ttf", 60)
-                self.font_medium = ImageFont.truetype("C:/Windows/Fonts/malgun.ttf", 45)
-                self.font_small = ImageFont.truetype("C:/Windows/Fonts/malgun.ttf", 30)
+                self.font_large = ImageFont.truetype("./ai/font/malgun.ttf", 60)
+                self.font_medium = ImageFont.truetype("./ai/font/malgun.ttf", 45)
+                self.font_small = ImageFont.truetype("./ai/font/malgun.ttf", 30)
                 print("[OK] 한글 폰트 로드")
             except:
                 print("[WARNING] 한글 폰트 없음")

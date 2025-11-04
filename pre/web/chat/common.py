@@ -4,6 +4,9 @@ from dataclasses import dataclass
 import pytz
 from datetime import datetime, timedelta
 import tiktoken
+from dotenv import load_dotenv
+
+load_dotenv()
 
 @dataclass(frozen=True)
 class Model: 

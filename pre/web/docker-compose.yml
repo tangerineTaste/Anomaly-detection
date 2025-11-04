@@ -9,6 +9,8 @@ services:
     environment:
       - REACT_APP_API_URL=http://host.docker.internal:5000
       - REACT_APP_RTSP_URL=ws://host.docker.internal:5001
+      - REACT_APP_DB_HOST=host.docker.internal:5432
+      - REACT_APP_CHAT_URI=mongodb+srv://mlops:study@express-mongo.34ldosh.mongodb.net/?appName=express-mongo
     extra_hosts:
       - "host.docker.internal:host-gateway"  # WSL 호스트 매핑 (Docker Desktop)
     networks:

@@ -151,8 +151,8 @@ const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
           </Grid>
         </Grid>
 
-        {/*/!* ----------------- 월별 이상행동 그래프 ----------------- *!/*/}
-        {/*  <Grid item xs={12} md={8}>*/}
+        {/* /!* ----------------- 월별 이상행동 그래프 ----------------- *!/*/}
+        {/* <Grid item xs={12} md={8}>*/}
         {/*    <Box*/}
         {/*      sx={{*/}
         {/*        background: "#fff",*/}
@@ -169,7 +169,7 @@ const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
         {/*        <LineChart isDashboard={true} data={stats.monthly_data || []} />*/}
         {/*      </Box>*/}
         {/*    </Box>*/}
-        {/*  </Grid>*/}
+        {/*  </Grid> */}
 
         {/* ----------------- 챗봇 박스 ----------------- */}
         <Grid item xs={12} md={4}>

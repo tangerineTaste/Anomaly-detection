@@ -1,0 +1,103 @@
+@charset "utf-8";
+.content{
+    width: 1555px;
+    height: 802px;
+    padding: 30px;
+    background-color: #fff;
+    border-radius: 10px;
+}
+.content .tit{
+    font-size: 21px;
+}
+.content .tit svg{
+    margin-right: 20px;
+}
+.search_wrapper{
+    width: 300px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 5px;
+    border: 1px solid #999;
+    background-color: #fff;
+    float: right;
+    margin-right: 30px;
+    padding: 0 10px;
+}
+.search_input_icon{
+    margin-right: 10px;
+}
+.search_input_field{
+    width: 230px;
+    outline: 0;
+    border: 0;
+    font-size: 16px;
+}
+
+.sort_select{
+    width: 100px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 5px;
+    outline: 0;
+    border: 1px solid #999;
+    float: right;
+    padding: 0 10px;
+}
+
+.tab_buttons_wrapper{
+    display: flex;
+    gap: 80px;
+    float: left;
+    margin: 20px 0 30px;
+}
+.tab_button{
+    width: 80px;
+    height: 20px;
+    background-color: #fff;
+    border: none;
+    border-left: 1px solid #999;
+    cursor: pointer;
+}
+
+
+.cam_container{
+    width: 1491px;
+    height: 632px;
+}
+.cam_container ul{
+    width: 1491px;
+    height: 615px;
+    display: flex;
+    gap: 55px;
+    overflow-y: scroll;
+    flex-wrap: wrap;
+}
+.cam_container ul li{
+    width: 450px;
+    height: 371px;
+    border: 1px solid #999;
+    padding: 25px;
+    background-color: #fff;
+}
+.cam_container li img{
+    width: 400px;
+    height: 225px;
+    margin-bottom: 15px;
+}
+.cam_container ul li .tit{
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+.cam_container ul li .txt{
+    color: #666;
+}
+.cam_container ul li button{
+    width: 150px;
+    height: 30px;
+    border: 0;
+    background-color: #F56214;
+    color: #fff;
+    font-size: 14px;
+    float: right;
+    cursor: pointer;
+}

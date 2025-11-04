@@ -21,7 +21,7 @@ class Chatbot:
             dbname="postgres",
             user="postgres",
             password="pgadmin1002",
-            host="192.168.243.24"
+            host="localhost"
         )
         self.pg_cur = self.pg_conn.cursor()
 
