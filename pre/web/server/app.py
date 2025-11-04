@@ -31,8 +31,12 @@ from ai.Damage import DamageDetector
 from ai.Violence import ViolenceDetector
 from ai.Weak import WeakDetector
 
+from ai.aiConAnomalyDetect import AbnormalBehaviorDetector
+
 # --- 모델 전역 로드 ---
 yolo_model = YOLO('./ai/yolov8n.pt') # YOLO 모델을 앱 시작 시 한 번만 로드합니다.
+
+
 
 # Creating the Flask app instance
 app = Flask(__name__)
@@ -62,6 +66,98 @@ jwt.init_app(app)
 
 # Enabling Cross-Origin Resource Sharing (CORS)
 CORS(app)
+
+
+# --- 대시보드 이상행동 감지 웹소켓 핸들러 ---
+video_list = [
+    './uploads/C_3_13_1_BU_SMA_08-28_14-30-29_CA_RGB_DF2_F1.mp4',
+    './uploads/C_3_10_1_BU_DYA_08-04_11-16-33_CC_RGB_DF2_M2.mp4',
+    './uploads/C_3_11_29_BU_SMC_08-07_16-19-38_CD_RGB_DF2_F1.mp4',
+]
+
+def dashboard_video_processing_thread(video_path, sid, stop_event, namespace):
+    """대시보드 이상행동 감지 비디오 처리를 위한 백그라운드 스레드"""
+    print(f"Starting dashboard anomaly detection thread for {sid} on {namespace} with video {video_path}")
+    try:
+        detector = AbnormalBehaviorDetector(model_path='./ai/efficient_50_best.pth', device='cpu')
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            print(f"Error: Could not open video stream from {video_path}")
+            return
+
+        frame_buffer = deque(maxlen=16)
+        frame_count = 0
+        stride = 8
+        last_result = None
+
+        while not stop_event.is_set():
+            ret, frame = cap.read()
+            if not ret:
+                print(f"End of video stream for {sid} on {namespace}, restarting.")
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                frame_buffer.clear()
+                frame_count = 0
+                last_result = None
+                continue
+
+            frame_count += 1
+            frame_buffer.append(frame.copy())
+
+            display_frame = frame
+
+            if len(frame_buffer) == 16 and frame_count % stride == 0:
+                result = detector.predict(list(frame_buffer))
+                last_result = result
+
+            if last_result:
+                display_frame = detector.draw_results(frame, last_result, len(frame_buffer))
+
+            _, buffer = cv2.imencode('.jpg', display_frame)
+            encoded_image = base64.b64encode(buffer).decode('utf-8')
+
+            socketio.emit('response', {
+                'image': 'data:image/jpeg;base64,' + encoded_image,
+            }, namespace=namespace, room=sid)
+            socketio.sleep(0.03) # ~33 FPS
+
+    except Exception as e:
+        print(f'Exiting dashboard detection thread for {sid} on {namespace} due to error: {e}')
+    finally:
+        if 'cap' in locals() and cap.isOpened():
+            cap.release()
+        print(f"Released video capture for {sid} on {namespace}")
+
+@socketio.on('connect', namespace='/ws/dashboard_feed')
+def connect_dashboard_feed():
+    sid = request.sid
+    print(f'Client connected to dashboard feed 1: {sid}')
+    stop_event = Event()
+    video_threads[sid] = stop_event
+    socketio.start_background_task(target=dashboard_video_processing_thread, video_path=video_list[0], sid=sid, stop_event=stop_event, namespace='/ws/dashboard_feed')
+
+@socketio.on('disconnect', namespace='/ws/dashboard_feed')
+def disconnect_dashboard_feed():
+    sid = request.sid
+    print(f'Client disconnected from dashboard feed 1: {sid}')
+    if sid in video_threads:
+        video_threads[sid].set()
+        del video_threads[sid]
+
+@socketio.on('connect', namespace='/ws/dashboard_feed_2')
+def connect_dashboard_feed_2():
+    sid = request.sid
+    print(f'Client connected to dashboard feed 2: {sid}')
+    stop_event = Event()
+    video_threads[sid] = stop_event
+    socketio.start_background_task(target=dashboard_video_processing_thread, video_path=video_list[1], sid=sid, stop_event=stop_event, namespace='/ws/dashboard_feed_2')
+
+@socketio.on('disconnect', namespace='/ws/dashboard_feed_2')
+def disconnect_dashboard_feed_2():
+    sid = request.sid
+    print(f'Client disconnected from dashboard feed 2: {sid}')
+    if sid in video_threads:
+        video_threads[sid].set()
+        del video_threads[sid]
 
 #Initialize boolean
 initialized = False

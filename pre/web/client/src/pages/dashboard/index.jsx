@@ -6,6 +6,8 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import LineChart from "../../components/LineChart";
 
+import { io } from "socket.io-client";
+
 const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
   // ✅ Flask API 경로
   const API_URL = "http://127.0.0.1:5000/dashboard/stats";
@@ -19,6 +21,9 @@ const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
     total_cameras: 0,
   });
 
+  const [liveFeed, setLiveFeed] = useState("");
+  const [liveFeed2, setLiveFeed2] = useState("");
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -30,6 +35,22 @@ const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
       }
     };
     fetchStats();
+
+    const socket1 = io("ws://127.0.0.1:5000/ws/dashboard_feed");
+    const socket2 = io("ws://127.0.0.1:5000/ws/dashboard_feed_2");
+
+    socket1.on("response", (data) => {
+      setLiveFeed(data.image);
+    });
+
+    socket2.on("response", (data) => {
+      setLiveFeed2(data.image);
+    });
+
+    return () => {
+      socket1.disconnect();
+      socket2.disconnect();
+    };
   }, []);
 
   // 🔶 카드 리스트
@@ -243,15 +264,17 @@ const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
               </Link>
             </Box>
 
-            <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-              {[1, 2, 3].map((i) => (
-                <img
-                  key={i}
-                  src={"../../assets/vid-evidence.jpg"}
-                  alt={`camera${i}`}
-                  style={{ width: "32%", borderRadius: "8px", objectFit: "cover" }}
-                />
-              ))}
+            <Box sx={{ display: "flex", justifyContent: "space-around", gap: 2 }}>
+              <img
+                src={liveFeed || "../../assets/vid-evidence.jpg"}
+                alt="Live Feed 1"
+                style={{ width: "48%", borderRadius: "8px", objectFit: "contain" }}
+              />
+              <img
+                src={liveFeed2 || "../../assets/vid-evidence.jpg"}
+                alt="Live Feed 2"
+                style={{ width: "48%", borderRadius: "8px", objectFit: "contain" }}
+              />
             </Box>
           </Box>
         </Grid>
