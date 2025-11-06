@@ -30,12 +30,13 @@ from ai.abandon import AbandonedItemDetector
 from ai.Damage import DamageDetector
 from ai.Violence import ViolenceDetector
 from ai.Weak import WeakDetector
+from ai.fire import FireDetector # Import the new FireDetector
 
 from ai.aiConAnomalyDetect import AbnormalBehaviorDetector
 
 # --- 모델 전역 로드 ---
 yolo_model = YOLO('./ai/yolov8n.pt') # YOLO 모델을 앱 시작 시 한 번만 로드합니다.
-
+fire_detector_yolo_model = YOLO('./ai/best.pt') # YOLO fire model
 
 
 # Creating the Flask app instance
@@ -327,7 +328,8 @@ def smoking_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if smoking is detected, with cooldown
             if "SMOKING" in prediction:
-                save_incident_if_needed(sid, "Smoking", "SmokingDetector", processed_frame)
+                # save_incident_if_needed(sid, "Smoking", "SmokingDetector", processed_frame)
+                pass
 
             socketio.emit('response', {'image': 'data:image/jpeg;base64,' + encoded_image, 'prediction': prediction}, namespace='/ws/video_feed', room=sid)
             socketio.sleep(0.03) # ~33 FPS
@@ -385,7 +387,8 @@ def abandoned_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if abandoned item is detected, with cooldown
             if detection_results and detection_results.get('abandoned_items'):
-                save_incident_if_needed(sid, "Abandoned Item", "AbandonedItemDetector", processed_frame)
+                # save_incident_if_needed(sid, "Abandoned Item", "AbandonedItemDetector", processed_frame)
+                pass
 
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
@@ -444,7 +447,8 @@ def breakage_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if damage is detected, with cooldown
             if detection_results.get('is_danger'):
-                save_incident_if_needed(sid, "Damage", "DamageDetector", processed_frame)
+                # save_incident_if_needed(sid, "Damage", "DamageDetector", processed_frame)
+                pass
 
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
@@ -503,7 +507,8 @@ def violence_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if violence is detected, with cooldown
             if detection_results.get('is_violence'):
-                save_incident_if_needed(sid, "Violence", "ViolenceDetector", processed_frame)
+                # save_incident_if_needed(sid, "Violence", "ViolenceDetector", processed_frame)
+                pass 
 
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
@@ -562,7 +567,8 @@ def weak_video_processing_thread(video_path, sid, stop_event):
             
             # Save incident if weak user is detected, with cooldown
             if detection_results.get('is_weak'):
-                save_incident_if_needed(sid, "Weak User", "WeakDetector", processed_frame)
+                # save_incident_if_needed(sid, "Weak User", "WeakDetector", processed_frame)
+                pass
 
             socketio.emit('response', {
                 'image': 'data:image/jpeg;base64,' + encoded_image,
@@ -596,6 +602,144 @@ def disconnect_weak_feed():
         video_threads[sid].set()
         del video_threads[sid]
         print(f"Stopped video thread for {sid}")
+
+
+# --- 화재 감지 웹소켓 핸들러 ---
+def fire_video_processing_thread(video_path, sid, stop_event):
+    """화재 감지 비디오 처리를 위한 백그라운드 스레드"""
+    print(f"Starting fire detection thread for {sid} with video {video_path}")
+    detector = FireDetector(yolo_model_path='./ai/fire_detection.pt') # Assuming a YOLO fire model exists
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error: Could not open video stream from {video_path}")
+        return
+
+    try:
+        while not stop_event.is_set():
+            ret, frame = cap.read()
+            if not ret:
+                print(f"End of video stream for {sid}, restarting.")
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0) # 비디오 루프
+                continue
+
+            processed_frame, detection_results = detector.process_frame(frame)
+            _, buffer = cv2.imencode('.jpg', processed_frame)
+            encoded_image = base64.b64encode(buffer).decode('utf-8')
+            
+            # Save incident if fire is detected, with cooldown
+            if detection_results.get('is_fire'):
+                # save_incident_if_needed(sid, "Fire", "FireDetector", processed_frame)
+                pass
+
+            socketio.emit('response', {
+                'image': 'data:image/jpeg;base64,' + encoded_image,
+                'detections': detection_results
+            }, namespace='/ws/fire_feed', room=sid)
+            socketio.sleep(0.03) # ~33 FPS
+    except Exception as e:
+        print(f'Exiting fire detection thread for {sid} due to error: {e}')
+    finally:
+        if 'cap' in locals() and cap.isOpened():
+            cap.release()
+        print(f"Released video capture for {sid}")
+
+@socketio.on('connect', namespace='/ws/fire_feed')
+def connect_fire_feed():
+    sid = request.sid
+    print(f'Client connected to fire feed: {sid}')
+    if sid in video_threads:
+        video_threads[sid].set()
+
+    stop_event = Event()
+    video_threads[sid] = stop_event
+
+    # You'll need to provide a suitable video path for fire detection
+    video_path = './uploads/C_3_9_2_BU_SMB_09-02_10-43-45_CA_RGB_DF2_M2.mp4' # Example video path
+    socketio.start_background_task(target=fire_video_processing_thread, video_path=video_path, sid=sid, stop_event=stop_event)
+
+@socketio.on('disconnect', namespace='/ws/fire_feed')
+def disconnect_fire_feed():
+    sid = request.sid
+    print(f'Client disconnected from fire feed: {sid}')
+    if sid in video_threads:
+        video_threads[sid].set()
+        del video_threads[sid]
+        print(f"Stopped video thread for {sid}")
+
+# --- 인시던트 확인 및 저장 핸들러 ---
+
+def _handle_incident_confirmation_logic(data):
+    """
+    (공유 로직) 클라이언트로부터 확인을 받아 인시던트를 데이터베이스에 저장합니다.
+    """
+    sid = request.sid
+    namespace = request.namespace
+    print(f"Received incident confirmation in namespace {namespace} from {sid}: {data.get('detectionMode')}")
+
+    try:
+        # 프론트엔드에서 전송된 데이터 추출
+        incident_type = data.get('mode')
+        detection_mode = data.get('detectionMode')
+        base64_image_data = data.get('image').split(',')[1]
+
+        # Base64 이미지 디코딩
+        image_bytes = base64.b64decode(base64_image_data)
+        np_arr = np.frombuffer(image_bytes, np.uint8)
+        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        # --- 인시던트 저장 ---
+        now = time.time()
+        with app.app_context():
+            # 이미지 파일 저장
+            image_filename = f"{detection_mode}_{int(now)}.jpg"
+            image_path_relative = os.path.join('incident_images', image_filename).replace('\\', '/')
+            full_image_path = os.path.join(app.root_path, image_path_relative)
+            cv2.imwrite(full_image_path, frame)
+
+            # 데이터베이스에 인시던트 저장
+            incident = Incidents(
+                type=incident_type,
+                module=f"{detection_mode.capitalize()}Detector",
+                camera="Camera 1",
+                status="Active",
+                image_path=image_path_relative
+            )
+            db.session.add(incident)
+            db.session.commit()
+            print(f"Incident saved via {namespace}: {incident_type} from {sid}")
+
+    except Exception as e:
+        print(f"Error handling incident confirmation in {namespace}: {e}")
+        db.session.rollback()
+    finally:
+        db.session.remove()
+
+
+@socketio.on('confirm_incident', namespace='/ws/video_feed')
+def handle_smoking_confirm(data):
+    _handle_incident_confirmation_logic(data)
+    print('데이터 받음~')
+
+@socketio.on('confirm_incident', namespace='/ws/abandoned_feed')
+def handle_abandoned_confirm(data):
+    _handle_incident_confirmation_logic(data)
+
+@socketio.on('confirm_incident', namespace='/ws/damage_feed')
+def handle_damage_confirm(data):
+    _handle_incident_confirmation_logic(data)
+
+@socketio.on('confirm_incident', namespace='/ws/violence_feed')
+def handle_violence_confirm(data):
+    _handle_incident_confirmation_logic(data)
+
+@socketio.on('confirm_incident', namespace='/ws/weak_feed')
+def handle_weak_confirm(data):
+    _handle_incident_confirmation_logic(data)
+
+@socketio.on('confirm_incident', namespace='/ws/fire_feed')
+def handle_fire_confirm(data):
+    _handle_incident_confirmation_logic(data)
+
 
 
 with app.app_context():

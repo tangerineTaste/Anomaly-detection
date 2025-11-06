@@ -3,29 +3,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FaRegEye } from "react-icons/fa";
+import axios from "axios";
 
 
 import "./MainContent.css";
 
-// 검색 기능: 원본 데이터 (이름 및 카테고리 포함)
-const initialSearchItems = [
-    // ✨ imageUrl 필드 추가!
-    { id: 1, name: 'ㄱㄱ 상가 1번 카메라', time: '2025-10-30 / 00:00:00', category: '방화', imageUrl: 'https://example.com/yolo_captured/image_001.webp' },
-    { id: 2, name: 'ㄴㄴ 버스 정류장 CCTV', time: '2025-10-30 / 01:23:45', category: '교통약자', imageUrl: 'https://example.com/yolo_captured/image_002.webp' },
-    { id: 3, name: 'ㄷㄷ 물류창고 3층', time: '2025-10-29 / 14:00:00', category: '방화', imageUrl: 'https://example.com/yolo_captured/image_003.webp' },
-    { id: 4, name: 'ㄹㄹ 편의점 입구', time: '2025-10-29 / 10:10:10', category: '절도', imageUrl: 'https://example.com/yolo_captured/image_004.webp' },
-    { id: 5, name: 'ㅁㅁ 지하철역 에스컬레이터', time: '2025-10-28 / 09:30:00', category: '교통약자', imageUrl: 'https://example.com/yolo_captured/image_005.webp' },
-    { id: 6, name: 'ㅂㅂ 공사장 입구', time: '2025-10-28 / 05:00:00', category: '전도', imageUrl: 'https://example.com/yolo_captured/image_006.webp' },
-    { id: 7, name: 'ㅅㅅ 아파트 놀이터', time: '2025-10-27 / 18:00:00', category: '유기', imageUrl: 'https://example.com/yolo_captured/image_007.webp' },
-    { id: 8, name: 'ㅇㅇ 공공 화장실 외벽', time: '2025-10-27 / 12:00:00', category: '파손', imageUrl: 'https://example.com/yolo_captured/image_008.webp' },
-    { id: 9, name: 'ㅈㅈ 식당 주방', time: '2025-10-26 / 23:00:00', category: '화재', imageUrl: 'https://example.com/yolo_captured/image_009.webp' },
-    { id: 10, name: 'ㅊㅊ 피씨방 1열', time: '2025-10-26 / 20:00:00', category: '흡연', imageUrl: 'https://example.com/yolo_captured/image_010.webp' },
-    { id: 11, name: 'ㅋㅋ 공원 입구 CCTV', time: '2025-10-25 / 07:00:00', category: '유기', imageUrl: 'https://example.com/yolo_captured/image_011.webp' },
-    { id: 12, name: 'ㅌㅌ 상가 2번 카메라', time: '2025-10-25 / 11:30:00', category: '흡연', imageUrl: 'https://example.com/yolo_captured/image_012.webp' },
-];
-
 function MenuContent_3() {
-    
+    const [incidents, setIncidents] = useState([]);
     const [activeCategory, setActiveCategory] = useState("전체"); // 현재 활성화된 탭 (카테고리) 관리 state
     const [searchTerm, setSearchTerm] = useState(''); // 검색어 state
 
@@ -35,6 +19,19 @@ function MenuContent_3() {
 
     // ✨ 스크롤을 조작할 DOM 요소에 대한 ref 생성
     const camContainerRef = useRef(null);
+
+    useEffect(() => {
+        const fetchIncidents = async () => {
+            try {
+                const response = await axios.get("http://localhost:5000/user/incidents");
+                setIncidents(response.data.incidents);
+            } catch (error) {
+                console.error("Error fetching incidents:", error);
+            }
+        };
+
+        fetchIncidents();
+    }, []);
 
     const handleSortChange = (event) => {
         setSelectedSortOrder(event.target.value); // 선택된 값으로 상태 업데이트
@@ -84,7 +81,13 @@ function MenuContent_3() {
     // 탭, 검색어, 정렬 옵션 변경 시 필터링 및 정렬 로직 실행
     useEffect(() => {
 
-        let currentItems = [...initialSearchItems]; // 환경에 맞게 조정 필요
+        let currentItems = incidents.map(incident => ({
+            id: incident.incidents_id,
+            name: incident.camera,
+            time: new Date(incident.date).toLocaleString('ko-KR'),
+            category: incident.type,
+            imageUrl: `http://localhost:5000/${incident.image_path}`
+        }));
 
         // 1. 정렬 적용
         currentItems.sort((a, b) => {
@@ -114,7 +117,7 @@ function MenuContent_3() {
         }
 
         setFilteredItems(currentItems); // 필터링 및 정렬된 결과로 state 업데이트
-    }, [activeCategory, searchTerm, selectedSortOrder]); // 의존성 배열도 잘 확인!
+    }, [incidents, activeCategory, searchTerm, selectedSortOrder]); // 의존성 배열도 잘 확인!
 
     // ✨ 컴포넌트의 반환 부분은 항상 함수의 제일 마지막에 와야 해!
     return (
@@ -167,7 +170,7 @@ function MenuContent_3() {
                     <ul>
                         {filteredItems.map(item => (
                             <li key={item.id}>
-                                <img src={item.Url} alt="Captured Camera thumbnail"/>
+                                <img src={item.imageUrl} alt="Captured Camera thumbnail"/>
                                 <p className="tit">{item.name}</p>
                                 <p className="txt">{item.time} ({item.category})</p>
                                 <button onClick={() => handleDownload(item.imageUrl,`${item.name}.webp`)}>이미지 다운로드</button>

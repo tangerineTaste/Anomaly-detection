@@ -8,10 +8,10 @@ const CameraFeedProcessor = () => {
   const [abandonedDetectionResults, setAbandonedDetectionResults] = useState(null);
   const [damageDetectionResults, setDamageDetectionResults] = useState(null);
   const [violenceDetectionResults, setViolenceDetectionResults] = useState(null);
-  const [weakDetectionResults, setWeakDetectionResults] = useState(null); // New state
-  const [fireDetectionResults, setFireDetectionResults] = useState(null); 
-  const [detectionMode, setDetectionMode] = useState('smoking'); // 'smoking', 'abandoned', 'damage', 'violence', 'weak'
+  const [weakDetectionResults, setWeakDetectionResults] = useState(null);
+  const [detectionMode, setDetectionMode] = useState('smoking');
   const [isConnected, setIsConnected] = useState(false);
+  const [savedImages, setSavedImages] = useState([]);
   const [alertHistory, setAlertHistory] = useState([]);
 
   const detectionEndpoints = {
@@ -19,8 +19,7 @@ const CameraFeedProcessor = () => {
     abandoned: 'http://localhost:5000/ws/abandoned_feed',
     damage: 'http://localhost:5000/ws/damage_feed',
     violence: 'http://localhost:5000/ws/violence_feed',
-    weak: 'http://localhost:5000/ws/weak_feed', // New endpoint
-    fire: 'http://localhost:5000/ws/fire_feed'
+    weak: 'http://localhost:5000/ws/weak_feed',
   };
 
   useEffect(() => {
@@ -33,9 +32,9 @@ const CameraFeedProcessor = () => {
     setAbandonedDetectionResults(null);
     setDamageDetectionResults(null);
     setViolenceDetectionResults(null);
-    setWeakDetectionResults(null); // Reset new state
-    setFireDetectionResults(null);
+    setWeakDetectionResults(null);
     setIsConnected(false);
+    setAlertHistory([]); // 알림 리스트 초기화
 
     const newSocket = io(detectionEndpoints[detectionMode], {
       transports: ['websocket'],
@@ -63,10 +62,8 @@ const CameraFeedProcessor = () => {
         setDamageDetectionResults(data.detections);
       } else if (detectionMode === 'violence') {
         setViolenceDetectionResults(data.detections);
-      } else if (detectionMode === 'weak') { // New handler case
+      } else if (detectionMode === 'weak') {
         setWeakDetectionResults(data.detections);
-      } else if (detectionMode === 'fire'){
-        setFireDetectionResults(data.detections);
       }
     });
 
@@ -80,6 +77,7 @@ const CameraFeedProcessor = () => {
     };
   }, [detectionMode]);
 
+  // 이상행동 감지 시 알림 히스토리에 추가
   useEffect(() => {
     if (isDetected() && processedFrame) {
       const status = getStatusText();
@@ -108,7 +106,7 @@ const CameraFeedProcessor = () => {
       };
       setAlertHistory(prev => [newAlert, ...prev]);
     }
-  }, [prediction, abandonedDetectionResults, damageDetectionResults, violenceDetectionResults, weakDetectionResults, fireDetectionResults]);
+  }, [prediction, abandonedDetectionResults, damageDetectionResults, violenceDetectionResults, weakDetectionResults]);
 
   const getStatusText = () => {
     if (detectionMode === 'smoking' && prediction) return prediction;
@@ -120,8 +118,6 @@ const CameraFeedProcessor = () => {
       return violenceDetectionResults.status_message;
     if (detectionMode === 'weak' && weakDetectionResults?.status_message) 
       return weakDetectionResults.status_message;
-    if (detectionMode === 'fire' && fireDetectionResults?.status_message) 
-      return fireDetectionResults.status_message;
     return '이상행동 감지됨';
   };
 
@@ -135,20 +131,17 @@ const CameraFeedProcessor = () => {
     setDetectionMode(mode);
   };
 
-  const handleConfirmAlert = (alert) => {
-    if (socketRef.current) {
-      console.log("DEBUG: Alert object before sending:", alert); // Add this for debugging
-      const dataToSend = {
-        mode: alert.mode,
-        detectionMode: alert.detectionMode,
-        timestamp: alert.timestamp,
-        status: alert.status,
-        image: alert.image
-      };
-      socketRef.current.emit('confirm_incident', dataToSend);
-      console.log('Confirmation sent to server:', dataToSend);
-      // Remove the alert from the history after confirmation
-      setAlertHistory(prev => prev.filter(a => a.id !== alert.id));
+  const handleSaveImage = (alertId, alertImage) => {
+    if (alertImage) {
+      const alert = alertHistory.find(a => a.id === alertId);
+      const link = document.createElement('a');
+      link.href = alertImage;
+      link.download = `${alert?.mode}_${Date.now()}.jpg`;
+      link.click();
+      
+      // 해당 알림 제거
+      setAlertHistory(prev => prev.filter(a => a.id !== alertId));
+      alert('이미지가 저장되었습니다!');
     }
   };
 
@@ -164,7 +157,6 @@ const CameraFeedProcessor = () => {
       case 'damage': return '파손 감지';
       case 'violence': return '폭행 감지';
       case 'weak': return '교통약자 감지';
-      case 'fire' : return '화재 감지';
       default: return '모드 전환';
     }
   };
@@ -175,7 +167,6 @@ const CameraFeedProcessor = () => {
     if (detectionMode === 'damage' && damageDetectionResults?.is_danger) return true;
     if (detectionMode === 'violence' && violenceDetectionResults?.is_violence) return true;
     if (detectionMode === 'weak' && weakDetectionResults?.is_weak) return true;
-    if (detectionMode === 'fire' && fireDetectionResults?.is_fire) return true;
     return false;
   };
 
@@ -343,32 +334,6 @@ const CameraFeedProcessor = () => {
                 filter: detectionMode === 'weak' ? 'invert(1)' : 'invert(0)', 
                 transition: 'filter 0.3s ease', }} />
             </button>
-
-            {/* 화재 감지 */}
-            <button
-              onClick={() => handleModeChange('fire')}
-              style={{
-                padding: '10px',
-                fontSize: '18px',
-                backgroundColor: detectionMode === 'fire' ? '#f56214' : '#ecf0f1',
-                color: detectionMode === 'fire' ? 'white' : '#f8f9f9',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                transition: 'all 0.3s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: '48px',
-                minHeight: '48px'
-              }}
-            >
-              <img src="./assets/fire.png" alt="fire"
-              style={{ 
-                width: '24px', height: '24px', 
-                filter: detectionMode === 'fire' ? 'invert(1)' : 'invert(0)', 
-                transition: 'filter 0.3s ease', }} />
-            </button>
           </div>
 
           {/* 오른쪽: 상태 표시 */}
@@ -394,10 +359,6 @@ const CameraFeedProcessor = () => {
             {detectionMode === 'weak' && weakDetectionResults && (
               weakDetectionResults.status_message ||
               (weakDetectionResults.is_weak ? '교통약자 감지됨!' : '교통약자 없음')
-            )}
-            {detectionMode === 'fire' && fireDetectionResults && (
-              fireDetectionResults.status_message ||
-              (fireDetectionResults.is_fire ? '화재 감지됨!' : '화재 없음')
             )}
           </div>
         </div>
@@ -487,8 +448,6 @@ const CameraFeedProcessor = () => {
                     </div>
                   </div>
                   
-                  <img src={alert.image} alt="Detected Frame" style={{ width: '100%', borderRadius: '8px', marginTop: '8px' }} />
-
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -507,7 +466,7 @@ const CameraFeedProcessor = () => {
                       gap: '0'
                     }}>
                       <button
-                        onClick={() => handleConfirmAlert(alert)}
+                        onClick={() => handleSaveImage(alert.id, alert.image)}
                         style={{
                           padding: '6px 16px',
                           fontSize: '12px',

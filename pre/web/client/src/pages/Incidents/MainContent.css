@@ -73,11 +73,12 @@
     flex-wrap: wrap;
 }
 .cam_container ul li{
-    width: 450px;
+    width: calc((100% - (2 * 55px)) / 3);
     height: 371px;
     border: 1px solid #999;
     padding: 25px;
     background-color: #fff;
+    list-style: none;
 }
 .cam_container li img{
     width: 400px;

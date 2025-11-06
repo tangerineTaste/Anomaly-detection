@@ -47,6 +47,7 @@
 
         .chat {
             width: 100%;
+            height: 100%;
             color: #434651;            
             border: 2px solid #EEEEEE  ;
             max-width: 430px;
@@ -55,6 +56,8 @@
             border-radius: 15px;
             background-color: white;
             box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
+            display: flex;
+            flex-direction: column;
         }
 
         .chat .chat-header {
@@ -345,7 +348,7 @@
                 init: function () {
                     this.cacheDOM();
                     this.bindEvents();
-                },                
+                },
                 // Cache DOM elements
                 cacheDOM: function () {
                     this.chatHistory = document.querySelector('.chat-history');
@@ -437,7 +440,7 @@
                 addMessageEnter: function (event) {
                     if (event.keyCode === 13) {
                         this.addMessage();
-                    }   
+                    }
                 },
                 // Scroll to the bottom of the chat history
                 scrollToBottom: function () {

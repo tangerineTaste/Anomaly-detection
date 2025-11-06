@@ -10,3 +10,11 @@
 OPENAI_API_KEY=[OPENAI키 입력]
 MONGO_CLUSTER_URI=[MongoDB키 입력]
 ```
+
+## 4. web 폴더로 돌아가기
+
+## 5. server 폴더로 이동
+
+## 6. flask db migrate 실행
+
+## 7. flask db upgrade 실행 
