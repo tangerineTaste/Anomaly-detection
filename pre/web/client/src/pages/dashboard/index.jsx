@@ -88,6 +88,26 @@ const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
     </svg>
   ];
 
+var chartJsData = {
+  labels: ['5월', '6월', '7월', '8월', '9월'],
+  datasets: [{
+      label: '이상행동 감지 수',
+      data: [10, 20, 15, 25, 30],
+      borderColor: 'rgba(75, 192, 192, 1)', 
+      borderWidth: 1,
+      fill: false 
+  }]
+};
+
+// 2. Nivo가 이해할 수 있는 형식으로 변환! 😈
+const nivoData = chartJsData.datasets.map(dataset => ({
+  id: dataset.label,
+  color: dataset.borderColor, // Nivo가 이 색상을 사용할 수 있어요
+  data: dataset.data.map((value, index) => ({
+    x: chartJsData.labels[index], // labels 배열에서 x축 값 가져오기
+    y: value                     // data 배열에서 y축 값 가져오기
+  }))
+}));
   return (
     <Box sx={{ backgroundColor: "#f8f9f9", height: "auto",}} p={4} minHeight={"100vh"}>
       <Grid container spacing={3}>
@@ -145,7 +165,7 @@ const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
               </Typography>
 
               <Box sx={{ height: "250px" }}>
-                <LineChart isDashboard={true} data={stats.monthly_data || []} />
+                <LineChart isDashboard={true} data={nivoData} />
               </Box>
             </Box>
           </Grid>
@@ -209,7 +229,7 @@ const Dashboard = ({ boxWidth = "380px", boxHeight = "150px" }) => {
                       const currentHost = window.location.hostname;
                       // 팝업창으로 열기 (크기, 위치 지정 가능)
                       window.open(
-                          `http://${currentHost}:8080/chat-app`,
+                          `http://${currentHost}:9999/chat-app`,
                           "_blank",
                           "width=1000,height=800,left=200,top=100,menubar=no,toolbar=no,scrollbars=yes,resizable=yes"
                       );

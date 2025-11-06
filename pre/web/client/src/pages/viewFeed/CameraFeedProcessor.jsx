@@ -8,9 +8,9 @@ const CameraFeedProcessor = () => {
   const [abandonedDetectionResults, setAbandonedDetectionResults] = useState(null);
   const [damageDetectionResults, setDamageDetectionResults] = useState(null);
   const [violenceDetectionResults, setViolenceDetectionResults] = useState(null);
-  const [weakDetectionResults, setWeakDetectionResults] = useState(null); // New state
+  const [weakDetectionResults, setWeakDetectionResults] = useState(null);
   const [fireDetectionResults, setFireDetectionResults] = useState(null); 
-  const [detectionMode, setDetectionMode] = useState('smoking'); // 'smoking', 'abandoned', 'damage', 'violence', 'weak'
+  const [detectionMode, setDetectionMode] = useState('smoking'); 
   const [isConnected, setIsConnected] = useState(false);
   const [alertHistory, setAlertHistory] = useState([]);
 
@@ -19,7 +19,7 @@ const CameraFeedProcessor = () => {
     abandoned: 'http://localhost:5000/ws/abandoned_feed',
     damage: 'http://localhost:5000/ws/damage_feed',
     violence: 'http://localhost:5000/ws/violence_feed',
-    weak: 'http://localhost:5000/ws/weak_feed', // New endpoint
+    weak: 'http://localhost:5000/ws/weak_feed', 
     fire: 'http://localhost:5000/ws/fire_feed'
   };
 
@@ -84,8 +84,8 @@ const CameraFeedProcessor = () => {
     if (isDetected() && processedFrame) {
       const status = getStatusText();
       
-      // NORMAL 상태나 정상 상태는 제외
-      if (status.includes('NORMAL') || status.includes('없음') || status.includes('정상')) {
+      // NORMAL 상태나 정상 상태, waiting 상태는 제외
+      if (status.includes('NORMAL') || status.includes('없음') || status.includes('정상') || status.includes('waiting')) {
         return;
       }
       
@@ -93,7 +93,7 @@ const CameraFeedProcessor = () => {
       if (alertHistory.length > 0) {
         const lastAlert = alertHistory[0];
         if (lastAlert.detectionMode === detectionMode && 
-            Math.abs(Date.now() - lastAlert.id) < 3000) {
+            Math.abs(Date.now() - lastAlert.id) < 30000) {
           return;
         }
       }

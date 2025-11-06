@@ -718,7 +718,6 @@ def _handle_incident_confirmation_logic(data):
 @socketio.on('confirm_incident', namespace='/ws/video_feed')
 def handle_smoking_confirm(data):
     _handle_incident_confirmation_logic(data)
-    print('데이터 받음~')
 
 @socketio.on('confirm_incident', namespace='/ws/abandoned_feed')
 def handle_abandoned_confirm(data):

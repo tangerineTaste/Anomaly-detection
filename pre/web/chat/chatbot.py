@@ -2,10 +2,11 @@ from common import client, makeup_response, gpt_num_tokens
 import math
 from memory_manager import MemoryManager
 import psycopg2
+import threading
+import time
 
 
 class Chatbot:
-
     def __init__(self, model, system_role, instruction, **kwargs):
         self.context = [{"role": "system", "content": system_role}]
         self.model = model
@@ -23,14 +24,36 @@ class Chatbot:
             password="pgadmin1002",
             host="localhost"
         )
-        self.pg_cur = self.pg_conn.cursor()
+        self._monitor_running = False  # 중복 모니터링 방지 플래그
 
+    # ======================
+    # 기본 메시지 처리
+    # ======================
     def add_user_message(self, user_message):
         self.context.append({"role": "user", "content": user_message, "saved": False})
 
+    def add_response(self, response):
+        if isinstance(response, str):
+            self.context.append({"role": "assistant", "content": response})
+        elif isinstance(response, dict):
+            try:
+                content = response['choices'][0]['message']["content"]
+                role = response['choices'][0]['message'].get("role", "assistant")
+                self.context.append({"role": role, "content": content})
+            except Exception:
+                self.context.append({"role": "assistant", "content": str(response)})
+        else:
+            self.context.append({"role": "assistant", "content": str(response)})
+
+    # ======================
+    # OpenAI API 요청
+    # ======================
+    def to_openai_context(self):
+        return [{"role": v["role"], "content": v["content"]} for v in self.context]
+
     def _send_request(self):
         try:
-            context = self.to_openai_contenxt()
+            context = self.to_openai_context()
             if gpt_num_tokens(context) > self.max_token_size:
                 self.context.pop()
                 return makeup_response("메시지 조금 짧게 보내줄래?")
@@ -39,101 +62,197 @@ class Chatbot:
                 messages=context,
                 temperature=0.5,
                 top_p=1,
-                max_tokens=256,
-                frequency_penalty=0,
-                presence_penalty=0
+                max_tokens=256
             ).model_dump()
+            return response
         except Exception as e:
-            print(f"Exception 오류({type(e)}) 발생:{e}")
-            return makeup_response("[내 찐친 챗봇에 문제가 발생했습니다. 잠시 뒤 이용해주세요]")
-        return response
+            print(f"Exception 오류({type(e)}): {e}")
+            return makeup_response("[챗봇에 문제가 발생했습니다. 잠시 뒤 이용해주세요]")
 
     def send_request(self):
         self.context[-1]['content'] += self.instruction
         return self._send_request()
 
-    def add_response(self, response):
-        """응답을 context에 추가, 항상 문자열로 저장"""
-        if isinstance(response, str):
-            self.context.append({"role": "assistant", "content": response})
-        elif isinstance(response, dict):
-            try:
-                content = response['choices'][0]['message']["content"]
-                role = response['choices'][0]['message'].get("role", "assistant")
-                self.context.append({"role": role, "content": content})
-            except (KeyError, IndexError, TypeError):
-                self.context.append({"role": "assistant", "content": str(response)})
-        else:
-            self.context.append({"role": "assistant", "content": str(response)})
-
+    # ======================
+    # PostgreSQL 연동
+    # ======================
     def get_camera_count(self):
         try:
-            self.pg_cur.execute('SELECT COUNT(*) FROM camera_details;')
-            result = self.pg_cur.fetchone()
-            return int(result[0]) if result else 0
+            with self.pg_conn.cursor() as cur:
+                cur.execute('SELECT COUNT(*) FROM camera_details;')
+                result = cur.fetchone()
+                return int(result[0]) if result else 0
         except Exception as e:
             print("Error in get_camera_count:", e)
             return 0
 
     def get_camera_list(self):
         try:
-            self.pg_cur.execute('SELECT "CameraName" FROM camera_details;')
-            rows = self.pg_cur.fetchall()
-            return [row[0] for row in rows] if rows else []
+            with self.pg_conn.cursor() as cur:
+                cur.execute('SELECT "CameraName" FROM camera_details;')
+                rows = cur.fetchall()
+                return [r[0] for r in rows] if rows else []
         except Exception as e:
             print("Error in get_camera_list:", e)
             return []
 
+    def get_abnormal_events(self):
+        """최근 이상현상 5개 (해결방안 없음)"""
+        try:
+            with self.pg_conn.cursor() as cur:
+                cur.execute(
+                    'SELECT "Name", "Type", "Location", "Description" '
+                    'FROM dispatch_details ORDER BY id DESC LIMIT 5;'
+                )
+                rows = cur.fetchall()
+                if not rows:
+                    return []
+                return [f"{r[0]} ({r[1]}) - 위치: {r[2]}, 설명: {r[3]}" for r in rows]
+        except Exception as e:
+            print("Error in get_abnormal_events:", e)
+            return []
+
+    def get_latest_event(self):
+        try:
+            with self.pg_conn.cursor() as cur:
+                cur.execute(
+                    'SELECT "Name", "Type", "Location", "Description" '
+                    'FROM dispatch_details ORDER BY id DESC LIMIT 1;'
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                return {"name": row[0], "type": row[1], "location": row[2], "description": row[3]}
+        except Exception as e:
+            print("Error in get_latest_event:", e)
+            return None
+
+    def get_latest_event_id(self):
+        try:
+            with self.pg_conn.cursor() as cur:
+                cur.execute('SELECT id FROM dispatch_details ORDER BY id DESC LIMIT 1;')
+                row = cur.fetchone()
+                return row[0] if row else 0
+        except Exception as e:
+            print("Error in get_latest_event_id:", e)
+            return 0
+
+    # ======================
+    # 챗봇 응답 로직
+    # ======================
     def get_response_content(self):
-        # 순수 사용자 입력만 사용 (instruction 제거)
         last_message = self.context[-1]["content"].split("instruction:")[0].strip()
 
-        # 카메라 개수 질문
-        if any(keyword in last_message for keyword in [
-        "카메라 몇 대", "카메라 몇대", "카메라 몇 개", "카메라 몇개", "카메라 개수", "카메라 대수",
-        "설치된 카메라 수", "카메라 총 몇 대"
-    ]):
+        # 카메라 관련
+        if any(k in last_message for k in ["카메라 개수", "카메라 대수", "카메라 몇 대", "카메라 몇개", "카메라 개수"]):
             count = self.get_camera_count()
-            print("DB에서 조회한 카메라 개수:", count)
             response = f"현재 설치된 카메라는 총 {count}대입니다."
             self.add_response(response)
             return response
-
-        # 카메라 목록 질문
-        if any(keyword in last_message for keyword in ["카메라 이름", "카메라 목록"]):
-            camera_list = self.get_camera_list()
-            response = "설치된 카메라 목록: " + ", ".join(camera_list) if camera_list else "설치된 카메라가 없습니다."
+        if any(k in last_message for k in ["카메라 이름", "카메라 목록"]):
+            cameras = self.get_camera_list()
+            response = (
+                "설치된 카메라 목록: " + ", ".join(cameras)
+                if cameras else "설치된 카메라가 없습니다."
+            )
             self.add_response(response)
             return response
 
-        # 일반 질문 → OpenAI 호출
+        # 이상현상 관련
+        if any(k in last_message for k in ["이상", "사고", "문제", "고장", "이벤트", "이슈"]):
+            if any(k in last_message for k in ["최근", "하나", "한 개", "1개", "마지막"]):
+                latest = self.get_latest_event()
+                if not latest:
+                    response = "현재 등록된 이상현상이 없습니다."
+                else:
+                    guide = {
+                        "전도": "즉시 주변 도움을 요청하고, 필요 시 119 신고하세요.",
+                        "파손": "현장 접근 제한 후 관리자에게 보고하세요.",
+                        "방화": "즉시 경보를 울리고 119 신고하세요.",
+                        "흡연": "흡연자 정보를 관리자에게 전달하세요.",
+                        "유기": "방치된 물체를 확인 후 담당자에게 알리세요.",
+                        "절도": "용의자 인상착의 확보 후 경찰에 신고하세요.",
+                        "폭행": "보안팀과 경찰에 즉시 연락하세요.",
+                        "교통약자": "도움이 필요하면 주변에 지원을 요청하세요."
+                    }.get(latest["type"], "관리자에게 보고하고 현장을 점검하세요.")
+                    response = (
+                        "최근 감지된 이상현상입니다.<br>"
+                        f"- 이름: {latest['name']}<br>"
+                        f"- 유형: {latest['type']}<br>"
+                        f"- 위치: {latest['location']}<br>"
+                        f"- 설명: {latest['description']}<br>"
+                        f"🔹 해결 방법: {guide}"
+                    )
+            else:
+                events = self.get_abnormal_events()
+                response = (
+                    "현재 등록된 이상현상이 없습니다." if not events
+                    else "최근 이상현상 목록입니다:<br>" + "<br>".join(f"- {e}" for e in events)
+                )
+            self.add_response(response)
+            return response
+
+        # 일반 질문
         response = self.send_request()
-        if isinstance(response, dict):
-            try:
-                response = response['choices'][0]['message']['content']
-            except (KeyError, IndexError, TypeError):
-                response = str(response)
-        elif not isinstance(response, str):
-            response = str(response)
-        self.add_response(response)
-        return response
+        content = response.get('choices', [{}])[0].get('message', {}).get('content', str(response))
+        self.add_response(content)
+        return content
 
-    def clean_context(self):
-        for idx in reversed(range(len(self.context))):
-            if self.context[idx]["role"] == "user":
-                self.context[idx]["content"] = self.context[idx]["content"].split("instruction:\n")[0].strip()
-                break
-
-    def handle_token_limit(self, response):
-        try:
-            if isinstance(response, dict) and response.get('usage', {}).get('total_tokens', 0) > self.max_token_size:
-                remove_size = math.ceil(len(self.context) / 10)
-                self.context = [self.context[0]] + self.context[remove_size + 1:]
-        except Exception as e:
-            print(f"handle_token_limit exception:{e}")
-
-    def to_openai_contenxt(self):
-        return [{"role": v["role"], "content": v["content"]} for v in self.context]
-
+    # ======================
+    # 유틸
+    # ======================
     def save_chat(self):
         self.memoryManager.save_chat(self.context)
+
+    def close_connection(self):
+        try:
+            if self.pg_conn:
+                self.pg_conn.close()
+        except Exception as e:
+            print("DB 연결 종료 중 오류:", e)
+
+    # ======================
+    # 이상현상 실시간 모니터링
+    # ======================
+    def start_event_monitor(self, interval=3, callback=None):
+        """DB에서 새로운 이상현상을 주기적으로 확인하고, 감지 시 자동으로 채팅 생성"""
+        self.last_event_id = self.get_latest_event_id()
+
+        def monitor():
+            print("[이상현상 모니터링 시작]")
+            while True:
+                try:
+                    latest_id = self.get_latest_event_id()
+                    if latest_id and latest_id > self.last_event_id:
+                        self.last_event_id = latest_id
+                        latest_event = self.get_latest_event()
+
+                        if latest_event:
+                            name = latest_event["name"]
+                            type_ = latest_event["type"]
+                            location = latest_event["location"]
+                            description = latest_event["description"]
+
+                            print(f"[새 이상현상 감지] {name} ({type_}) / {location}")
+
+                            # ✅ 마치 사용자가 '최근 이상현상' 입력한 것처럼 처리
+                            trigger_message = "최근 이상현상"
+                            self.add_user_message(trigger_message)
+                            response = self.get_response_content()
+                            self.add_response(response)
+
+                            # ✅ Flask에 콜백 전달
+                            if callback:
+                                callback(response)
+
+                    time.sleep(interval)
+
+                except Exception as e:
+                    print("[이상현상 모니터링 오류]", e)
+                    time.sleep(interval)
+
+        threading.Thread(target=monitor, daemon=True).start()
+
+    def stop_event_monitor(self):
+        self._monitor_running = False
+        print("[이상현상 모니터링 중단]")

@@ -4,7 +4,7 @@ from ultralytics import YOLO
 from PIL import ImageFont, ImageDraw, Image
 
 class ViolenceDetector:
-    def __init__(self, yolo_model_path, resize_width=720, min_person_conf=0.5, box_margin=20, flow_threshold=2.0, danger_pixels_min=50, consec_frames=2):
+    def __init__(self, yolo_model_path, resize_width=720, min_person_conf=0.5, box_margin=20, flow_threshold=3.0, danger_pixels_min=100, consec_frames=3):
         self.model = YOLO(yolo_model_path)
         self.resize_width = resize_width
         self.new_h = None

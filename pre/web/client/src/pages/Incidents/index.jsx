@@ -80,44 +80,49 @@ function MenuContent_3() {
 
     // 탭, 검색어, 정렬 옵션 변경 시 필터링 및 정렬 로직 실행
     useEffect(() => {
-
-        let currentItems = incidents.map(incident => ({
+        // 1. 데이터 가공 (정렬에 용이하도록 원본 날짜 보존)
+        let processedItems = incidents.map(incident => ({
             id: incident.incidents_id,
             name: incident.camera,
-            time: new Date(incident.date).toLocaleString('ko-KR'),
+            originalDate: new Date(incident.date), // 정렬을 위한 원본 Date 객체
+            time: new Date(incident.date).toLocaleString('ko-KR'), // 표시를 위한 문자열
             category: incident.type,
             imageUrl: `http://localhost:5000/${incident.image_path}`
         }));
 
-        // 1. 정렬 적용
-        currentItems.sort((a, b) => {
-            const dateA = new Date(a.time.replace(' / ', 'T'));
-            const dateB = new Date(b.time.replace(' / ', 'T'));
-            return selectedSortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+        // 2. 정렬 적용
+        processedItems.sort((a, b) => {
+            if (selectedSortOrder === 'newest') {
+                return b.originalDate - a.originalDate;
+            } else {
+                return a.originalDate - b.originalDate;
+            }
         });
 
-        // 2. 카테고리 필터링
+        // 3. 카테고리 필터링
         if (activeCategory !== "전체") {
-            currentItems = currentItems.filter(item =>
+            processedItems = processedItems.filter(item =>
                 item.category.toLowerCase() === activeCategory.toLowerCase()
             );
         }
 
-        // 3. 검색어 필터링 (이름, 카테고리, 날짜)
+        // 4. 검색어 필터링
         if (searchTerm) {
             const lowerCaseSearchTerm = searchTerm.toLowerCase();
-            currentItems = currentItems.filter(item => {
-                const itemDatePart = item.time.split(' ')[0];
+            processedItems = processedItems.filter(item => {
+                // 표시되는 시간 문자열에서 날짜 부분만 추출 (예: "2023. 11. 20.")
+                const itemDatePart = item.time.split('오')[0].trim(); 
                 return (
                     item.name.toLowerCase().includes(lowerCaseSearchTerm) ||
                     item.category.toLowerCase().includes(lowerCaseSearchTerm) ||
-                    itemDatePart.includes(lowerCaseSearchTerm)
+                    itemDatePart.includes(lowerCaseSearchTerm) || // 날짜 부분 검색
+                    item.time.toLowerCase().includes(lowerCaseSearchTerm) // 전체 시간 문자열 검색
                 );
             });
         }
 
-        setFilteredItems(currentItems); // 필터링 및 정렬된 결과로 state 업데이트
-    }, [incidents, activeCategory, searchTerm, selectedSortOrder]); // 의존성 배열도 잘 확인!
+        setFilteredItems(processedItems);
+    }, [incidents, activeCategory, searchTerm, selectedSortOrder]);
 
     // ✨ 컴포넌트의 반환 부분은 항상 함수의 제일 마지막에 와야 해!
     return (
